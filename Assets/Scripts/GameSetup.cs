@@ -34,6 +34,8 @@ public class GameSetup : MonoBehaviour
         var enemyGo = new GameObject();
         var enemy = enemyGo.AddComponent<EnemyUnit>();
         enemy.Init(Team.Enemy, enemyCoord, hexGrid);
+        enemy.InitCards(CreateEnemyCards());
+        enemy.SetPlayer(player);
 
         // Hex interaction (hover + click)
         var interactionGo = new GameObject("HexInteraction");
@@ -46,6 +48,7 @@ public class GameSetup : MonoBehaviour
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
         player.SetTurnManager(turnManager);
+        enemy.SetTurnManager(turnManager);
         turnManager.Begin(player, enemy);
 
         Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
@@ -79,5 +82,24 @@ public class GameSetup : MonoBehaviour
         pull.cooldown = 3;
 
         return new[] { move, attack, push, pull };
+    }
+
+    private static CardData[] CreateEnemyCards()
+    {
+        // Attack first (priority), then move toward player
+        var attack = ScriptableObject.CreateInstance<CardData>();
+        attack.cardName = "Claw";
+        attack.effect = CardEffect.Attack;
+        attack.range = 1;
+        attack.damage = 1;
+        attack.cooldown = 1;
+
+        var move = ScriptableObject.CreateInstance<CardData>();
+        move.cardName = "Advance";
+        move.effect = CardEffect.Move;
+        move.range = 1;
+        move.cooldown = 1;
+
+        return new[] { attack, move };
     }
 }

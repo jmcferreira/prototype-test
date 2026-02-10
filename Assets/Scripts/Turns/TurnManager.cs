@@ -33,8 +33,7 @@ public class TurnManager : MonoBehaviour
         }
         else
         {
-            Debug.Log($"=== Turn {TurnNumber} — ENEMY turn === (auto-ending, no AI yet)");
-            Invoke(nameof(EndCurrentTurn), 0.1f);
+            Debug.Log($"=== Turn {TurnNumber} — ENEMY turn ===");
         }
     }
 
