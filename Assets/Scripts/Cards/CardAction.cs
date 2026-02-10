@@ -15,4 +15,8 @@ public class CardAction
 
     [Tooltip("If true, this action cannot be skipped by the player")]
     public bool mandatory;
+
+    [Header("Status Effect (only used when effect = Status)")]
+    public StatusEffectType statusEffect;
+    [Min(1)] public int statusStacks = 1;
 }

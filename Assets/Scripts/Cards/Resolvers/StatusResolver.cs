@@ -2,17 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Attack: deal card.damage to the enemy if within card.range hex distance.
-/// Valid target is the enemy's hex.
+/// Applies a status effect to the enemy at target hex.
+/// Range works like Attack — valid if enemy is within action.range.
 /// </summary>
-public class AttackResolver : ICardResolver
+public class StatusResolver : ICardResolver
 {
     public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
     {
         var targets = new List<HexCoord>();
-        // Blind prevents targeting enemies
-        if (caster.HasStatus(StatusEffectType.Blind))
-            return targets;
         if (caster.Coord.DistanceTo(enemy.Coord) <= action.range)
             targets.Add(enemy.Coord);
         return targets;
@@ -20,7 +17,8 @@ public class AttackResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        enemy.TakeHit(action.damage);
-        Debug.Log($"Attack: {caster.Team} hit {enemy.Team} for {action.damage} damage.");
+        enemy.ApplyStatus(action.statusEffect, action.statusStacks);
+        var def = StatusEffectDefs.Get(action.statusEffect);
+        Debug.Log($"Status: {caster.Team} applied {action.statusStacks} {def.Name} to {enemy.Team}.");
     }
 }

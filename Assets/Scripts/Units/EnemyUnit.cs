@@ -73,6 +73,7 @@ public class EnemyUnit : Unit
 
                 Debug.Log($"  Enemy resolves {Hand.DescribeAction(action)} at {best}.");
                 card.ResolveAction(i, this, _player, Grid, best);
+                TriggerStatuses(StatusTrigger.OnAction); // Burn etc.
             }
 
             card.StartCooldown();

@@ -70,6 +70,7 @@ public class PlayerUnit : Unit
         _handUI?.SetSelectedCard(-1);
         _handUI?.HideActionStep();
         _state = State.Inactive;
+        base.OnTurnEnd(); // Poison damage + status decay
     }
 
     private void Update()
@@ -199,6 +200,7 @@ public class PlayerUnit : Unit
         ClearTargetHover();
         ClearHighlights();
         _selectedCard.ResolveAction(_currentActionIndex, this, _enemy, Grid, clicked);
+        TriggerStatuses(StatusTrigger.OnAction); // Burn etc.
         _currentActionIndex++;
         ShowCurrentAction();
     }

@@ -13,6 +13,7 @@ public static class CardResolverFactory
         { CardEffect.Push,   new PushResolver() },
         { CardEffect.Pull,   new PullResolver() },
         { CardEffect.Heal,   new HealResolver() },
+        { CardEffect.Status, new StatusResolver() },
     };
 
     public static ICardResolver Get(CardEffect effect)

@@ -80,10 +80,14 @@ public class GameSetup : MonoBehaviour
         };
         dashStrike.cooldown = 2;
 
-        // Card 2 — Fireshot: Attack 1 Range 3
+        // Card 2 — Fireshot: Attack 1 Range 3 → Burn 1 Range 3
         var fireshot = ScriptableObject.CreateInstance<CardData>();
         fireshot.cardName = "Fireshot";
-        fireshot.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 } };
+        fireshot.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 },
+            new CardAction { effect = CardEffect.Status, range = 3, statusEffect = StatusEffectType.Burn, statusStacks = 1 },
+        };
         fireshot.cooldown = 2;
 
         // Card 3 — Exorcize: Attack 1 → Push 2
@@ -123,6 +127,15 @@ public class GameSetup : MonoBehaviour
         advance.actions = new[] { new CardAction { effect = CardEffect.Move, range = 1 } };
         advance.cooldown = 1;
 
-        return new[] { claw, advance };
+        // Poison Spit: Poison 1 Range 2
+        var spit = ScriptableObject.CreateInstance<CardData>();
+        spit.cardName = "Poison Spit";
+        spit.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Status, range = 2, statusEffect = StatusEffectType.Poison, statusStacks = 1 },
+        };
+        spit.cooldown = 2;
+
+        return new[] { claw, advance, spit };
     }
 }

@@ -58,6 +58,9 @@ public class Hand
             case CardEffect.Push:   return $"Push {action.pushDistance} Rng {action.range}";
             case CardEffect.Pull:   return $"Pull {action.pushDistance} Rng {action.range}";
             case CardEffect.Heal:   return $"Heal {action.damage}";
+            case CardEffect.Status:
+                var def = StatusEffectDefs.Get(action.statusEffect);
+                return $"{def.Name} {action.statusStacks} Rng {action.range}";
             default:                return action.effect.ToString();
         }
     }
