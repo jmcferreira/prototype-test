@@ -127,7 +127,7 @@ public abstract class Unit : MonoBehaviour
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
         var tm = go.AddComponent<TextMesh>();
-        tm.text = $"-{damage}";
+        tm.text = $"-{damage} \u2665";
         tm.fontSize = 64;
         tm.characterSize = 0.14f;
         tm.anchor = TextAnchor.MiddleCenter;
