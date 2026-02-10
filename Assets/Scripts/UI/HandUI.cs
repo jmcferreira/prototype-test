@@ -80,7 +80,7 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 200f);
+        bgRect.sizeDelta = new Vector2(0f, 220f);
 
         // Old action step UI (hidden — replaced by expanded card)
         BuildActionStepUI();
@@ -92,7 +92,7 @@ public class HandUI : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0f);
         panelRect.anchorMax = new Vector2(0.5f, 0f);
         panelRect.pivot = new Vector2(0.5f, 0f);
-        panelRect.anchoredPosition = new Vector2(0f, -42f);
+        panelRect.anchoredPosition = new Vector2(0f, 15f);
 
         var layout = panelGo.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = -20;
@@ -131,7 +131,7 @@ public class HandUI : MonoBehaviour
         var passRect = passGo.AddComponent<RectTransform>();
         var passLe = passGo.AddComponent<LayoutElement>();
         passLe.preferredWidth = 140;
-        passLe.preferredHeight = 280;
+        passLe.preferredHeight = 64;
 
         var passBg = passGo.AddComponent<Image>();
         passBg.color = new Color(0.85f, 0.75f, 0.65f);
@@ -147,7 +147,7 @@ public class HandUI : MonoBehaviour
         passText.fontSize = 32;
         passText.alignment = TextAnchor.MiddleCenter;
         passText.color = Color.black;
-        passText.text = "Pass";
+        passText.text = "End Turn";
         var textRect = passTextGo.GetComponent<RectTransform>();
         textRect.anchorMin = Vector2.zero;
         textRect.anchorMax = Vector2.one;

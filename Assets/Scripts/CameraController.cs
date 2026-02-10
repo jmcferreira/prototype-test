@@ -20,8 +20,6 @@ public class CameraController : MonoBehaviour
     private void Start()
     {
         _cam = Camera.main;
-        if (_cam != null)
-            _cam.orthographicSize = 10f;
     }
 
     private void Update()
