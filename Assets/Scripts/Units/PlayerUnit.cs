@@ -1,12 +1,14 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Player-controlled unit. During their turn:
-///   1–4: select a card
-///   For Move: click a hex or use Q/W/E/A/S/D for direction
-///   For Attack/Push/Pull: auto-targets the enemy
+///   1–4: select a card → valid targets are highlighted
+///   Click a highlighted hex to resolve the card
 ///   Space: end turn without playing a card
 ///   Escape: cancel card selection
+/// Cards handle their own targeting via ICardResolver — PlayerUnit
+/// only manages the select → target → resolve flow.
 /// </summary>
 public class PlayerUnit : Unit
 {
@@ -14,6 +16,7 @@ public class PlayerUnit : Unit
 
     private bool _canAct;
     private CardInstance _selectedCard;
+    private List<HexCoord> _validTargets;
     private Unit _enemy;
     private HexInteraction _hexInteraction;
 
@@ -36,6 +39,7 @@ public class PlayerUnit : Unit
     {
         _canAct = true;
         _selectedCard = null;
+        _validTargets = null;
 
         Hand?.TickCooldowns();
         Debug.Log("--- Your hand ---");
@@ -46,8 +50,7 @@ public class PlayerUnit : Unit
     public override void OnTurnEnd()
     {
         _canAct = false;
-        _selectedCard = null;
-        _hexInteraction?.ClearSelection();
+        CancelSelection();
     }
 
     private void Update()
@@ -70,24 +73,26 @@ public class PlayerUnit : Unit
         {
             if (!Input.GetKeyDown(KeyCode.Alpha1 + i)) continue;
 
-            var card = Hand?.TryPlay(i);
-            if (card == null) break;
+            var card = Hand?.Cards[i];
+            if (card == null || !card.IsReady)
+            {
+                Debug.Log(card == null
+                    ? $"No card at slot {i + 1}."
+                    : $"[{card.Data.cardName}] on cooldown ({card.CooldownRemaining} turns).");
+                break;
+            }
 
-            if (card.Data.effect == CardEffect.Move)
+            var targets = card.GetValidTargets(this, _enemy, Grid);
+            if (targets.Count == 0)
             {
-                _selectedCard = card;
-                Debug.Log($"[{card.Data.cardName}] selected — click a hex or pick direction: Q=E, W=NE, E=NW, A=W, S=SW, D=SE");
+                Debug.Log($"[{card.Data.cardName}] has no valid targets.");
+                break;
             }
-            else
-            {
-                bool success = CardEffectExecutor.Execute(card, this, _enemy, Grid);
-                if (!success)
-                {
-                    card.ResetCooldown();
-                    Debug.Log("Effect failed — card cooldown refunded.");
-                }
-                FinishAction();
-            }
+
+            _selectedCard = card;
+            _validTargets = targets;
+            HighlightTargets(true);
+            Debug.Log($"[{card.Data.cardName}] selected — click a highlighted hex to resolve. Escape to cancel.");
             break;
         }
     }
@@ -96,76 +101,52 @@ public class PlayerUnit : Unit
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            _selectedCard.ResetCooldown();
-            _selectedCard = null;
-            _hexInteraction?.ClearSelection();
-            Debug.Log("Card cancelled — cooldown refunded.");
+            Debug.Log("Card cancelled.");
+            CancelSelection();
             Debug.Log("Press 1-4 to play a card, Space to end turn.");
             return;
         }
 
-        // Keyboard direction: Q=E(0), W=NE(1), E=NW(2), A=W(3), S=SW(4), D=SE(5)
-        int dir = -1;
-        if (Input.GetKeyDown(KeyCode.Q)) dir = 0;
-        else if (Input.GetKeyDown(KeyCode.W)) dir = 1;
-        else if (Input.GetKeyDown(KeyCode.E)) dir = 2;
-        else if (Input.GetKeyDown(KeyCode.A)) dir = 3;
-        else if (Input.GetKeyDown(KeyCode.S)) dir = 4;
-        else if (Input.GetKeyDown(KeyCode.D)) dir = 5;
+        if (!Input.GetMouseButtonDown(0)) return;
 
-        if (dir >= 0)
+        var tile = _hexInteraction?.SelectedTile;
+        if (tile == null) return;
+
+        HexCoord clicked = tile.Coord;
+
+        if (!_validTargets.Contains(clicked))
         {
-            bool success = CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, dir);
-            if (!success)
-            {
-                _selectedCard.ResetCooldown();
-                Debug.Log("Move failed — card cooldown refunded.");
-            }
-            _selectedCard = null;
-            FinishAction();
+            Debug.Log($"{clicked} is not a valid target for [{_selectedCard.Data.cardName}].");
             return;
         }
 
-        // Mouse click: use the selected tile from HexInteraction
-        if (_hexInteraction != null && _hexInteraction.SelectedTile != null && Input.GetMouseButtonDown(0))
-        {
-            HexCoord target = _hexInteraction.SelectedTile.Coord;
-            // Find which direction this hex is relative to us and walk there
-            bool success = TryMoveToward(target);
-            if (!success)
-            {
-                _selectedCard.ResetCooldown();
-                Debug.Log("Move failed — card cooldown refunded.");
-            }
-            _selectedCard = null;
-            FinishAction();
-        }
-    }
-
-    private bool TryMoveToward(HexCoord target)
-    {
-        // Find the direction from current coord toward the target
-        int bestDir = -1;
-        int bestDist = int.MaxValue;
-
-        for (int i = 0; i < 6; i++)
-        {
-            HexCoord neighbor = Coord.Neighbor(i);
-            int dist = neighbor.DistanceTo(target);
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                bestDir = i;
-            }
-        }
-
-        if (bestDir < 0) return false;
-        return CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, bestDir);
-    }
-
-    private void FinishAction()
-    {
+        // Resolve the effect
+        _selectedCard.Resolve(this, _enemy, Grid, clicked);
+        HighlightTargets(false);
+        _selectedCard = null;
+        _validTargets = null;
         _canAct = false;
         _hexInteraction?.ClearSelection();
+    }
+
+    private void CancelSelection()
+    {
+        if (_validTargets != null)
+            HighlightTargets(false);
+
+        _selectedCard = null;
+        _validTargets = null;
+        _hexInteraction?.ClearSelection();
+    }
+
+    private void HighlightTargets(bool highlight)
+    {
+        if (_validTargets == null) return;
+
+        foreach (var coord in _validTargets)
+        {
+            if (Grid.TryGetTile(coord, out HexTile tile))
+                tile.SetSelected(highlight);
+        }
     }
 }

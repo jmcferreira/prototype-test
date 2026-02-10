@@ -17,22 +17,6 @@ public class Hand
     }
 
     /// <summary>
-    /// Try to play the card at the given index. Returns the CardInstance if
-    /// it was playable, null otherwise.
-    /// </summary>
-    public CardInstance TryPlay(int index)
-    {
-        if (index < 0 || index >= _cards.Count)
-        {
-            Debug.Log($"Invalid card index: {index}");
-            return null;
-        }
-
-        var card = _cards[index];
-        return card.TryPlay() ? card : null;
-    }
-
-    /// <summary>
     /// Tick all cooldowns by 1. Call at the start of the owning player's turn.
     /// </summary>
     public void TickCooldowns()
