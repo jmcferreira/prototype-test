@@ -25,7 +25,7 @@ public abstract class Unit : MonoBehaviour
     // --- Status effects ---
     private readonly Dictionary<StatusEffectType, int> _statuses = new();
 
-    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null, int maxHP = 3)
+    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null, int maxHP = 3, string acronym = null)
     {
         Team = team;
         DisplayName = displayName ?? team.ToString();
@@ -37,15 +37,51 @@ public abstract class Unit : MonoBehaviour
         PlaceAt(startCoord);
         gameObject.name = DisplayName;
 
-        // Simple colored cube so we can tell them apart
-        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cube.transform.SetParent(transform);
-        cube.transform.localPosition = Vector3.zero;
-        cube.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        Color teamBright = team == Team.Player
+            ? new Color(0.25f, 0.42f, 0.92f)
+            : new Color(0.88f, 0.22f, 0.22f);
+        Color teamDark = team == Team.Player
+            ? new Color(0.12f, 0.18f, 0.50f)
+            : new Color(0.50f, 0.12f, 0.12f);
 
+        // Poker-chip rim (outer, darker, slightly larger)
+        var rim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        rim.transform.SetParent(transform);
+        rim.transform.localPosition = Vector3.zero;
+        rim.transform.localScale = new Vector3(0.78f, 0.045f, 0.78f);
+        rim.GetComponent<MeshRenderer>().material = CreateUnlitMat(teamDark);
+        rim.name = "ChipRim";
+
+        // Poker-chip face (inner, brighter)
+        var face = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        face.transform.SetParent(transform);
+        face.transform.localPosition = new Vector3(0f, 0.005f, 0f);
+        face.transform.localScale = new Vector3(0.64f, 0.05f, 0.64f);
+        face.GetComponent<MeshRenderer>().material = CreateUnlitMat(teamBright);
+        face.name = "ChipFace";
+
+        // Acronym label on top (world-space TextMesh, faces the top-down camera)
+        string label = acronym ?? (DisplayName.Length > 0 ? DisplayName.Substring(0, 1) : "?");
+        var labelGo = new GameObject("Label");
+        labelGo.transform.SetParent(transform);
+        labelGo.transform.localPosition = new Vector3(0f, 0.07f, 0f);
+        labelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+        var tm = labelGo.AddComponent<TextMesh>();
+        tm.text = label;
+        tm.fontSize = 64;
+        tm.characterSize = 0.12f;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = Color.white;
+        tm.fontStyle = FontStyle.Bold;
+    }
+
+    private static Material CreateUnlitMat(Color color)
+    {
         var mat = new Material(Shader.Find("Unlit/Color"));
-        mat.color = team == Team.Player ? Color.blue : Color.red;
-        cube.GetComponent<MeshRenderer>().material = mat;
+        mat.color = color;
+        return mat;
     }
 
     /// <summary>

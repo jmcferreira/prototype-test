@@ -30,7 +30,7 @@ public class GameSetup : MonoBehaviour
         var playerCoord = new HexCoord(1, 1);
         var playerGo = new GameObject();
         var player = playerGo.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, playerCoord, hexGrid, "Player 1", 3);
+        player.Init(Team.Player, playerCoord, hexGrid, "Player 1", 3, "P1");
 
         // Load from Inspector or fall back to Resources/Cards
         if (playerCards == null || playerCards.Length == 0)
@@ -46,19 +46,19 @@ public class GameSetup : MonoBehaviour
         // Spider 1
         var spider1Go = new GameObject();
         var spider1 = spider1Go.AddComponent<EnemyUnit>();
-        spider1.Init(Team.Enemy, new HexCoord(4, 0), hexGrid, "Spider 1", 3);
+        spider1.Init(Team.Enemy, new HexCoord(4, 0), hexGrid, "Spider 1", 3, "S");
         spider1.InitCards(spiderCards);
 
         // Spider 2
         var spider2Go = new GameObject();
         var spider2 = spider2Go.AddComponent<EnemyUnit>();
-        spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3);
+        spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3, "S");
         spider2.InitCards(CreateSpiderCards()); // separate instances
 
         // Orc
         var orcGo = new GameObject();
         var orc = orcGo.AddComponent<EnemyUnit>();
-        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6);
+        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6, "O");
         orc.InitCards(orcCards);
 
         // --- HexInteraction ---
