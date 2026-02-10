@@ -136,10 +136,32 @@ public abstract class Unit : MonoBehaviour
         tm.color = new Color(1f, 0.2f, 0.15f);
         tm.fontStyle = FontStyle.Bold;
 
-        StartCoroutine(AnimateDamageNumber(go, tm));
+        StartCoroutine(AnimateFloatingText(go, tm, 0.8f));
     }
 
-    private static IEnumerator AnimateDamageNumber(GameObject go, TextMesh tm)
+    /// <summary>
+    /// Spawn a floating status popup: "Icon Name X" in the status colour.
+    /// Drifts downward (opposite of damage numbers) so they don't overlap.
+    /// </summary>
+    private void SpawnStatusNumber(StatusEffectDefs.Def def, int stacks)
+    {
+        var go = new GameObject("StatusNum");
+        go.transform.position = transform.position + new Vector3(0f, 0.15f, -0.3f);
+        go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        var tm = go.AddComponent<TextMesh>();
+        tm.text = $"{def.Icon} {def.Name} {stacks}";
+        tm.fontSize = 64;
+        tm.characterSize = 0.10f;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = def.IconColor;
+        tm.fontStyle = FontStyle.Bold;
+
+        StartCoroutine(AnimateFloatingText(go, tm, -0.8f));
+    }
+
+    private static IEnumerator AnimateFloatingText(GameObject go, TextMesh tm, float driftZ)
     {
         float duration = 0.9f;
         float elapsed = 0f;
@@ -151,10 +173,8 @@ public abstract class Unit : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = elapsed / duration;
 
-            // Drift upward (in world Z = screen up for top-down camera)
-            go.transform.position = startPos + new Vector3(0f, 0f, t * 0.8f);
+            go.transform.position = startPos + new Vector3(0f, 0f, t * driftZ);
 
-            // Fade out in the second half
             float alpha = t < 0.5f ? 1f : 1f - (t - 0.5f) * 2f;
             tm.color = new Color(startColor.r, startColor.g, startColor.b, alpha);
 
@@ -186,6 +206,7 @@ public abstract class Unit : MonoBehaviour
         int newStacks = Mathf.Min(current + stacks, def.MaxStacks);
         _statuses[type] = newStacks;
         Debug.Log($"{DisplayName} gained {stacks} {def.Name} (now {newStacks}/{def.MaxStacks})");
+        SpawnStatusNumber(def, stacks);
         NotifyChanged();
     }
 
