@@ -37,6 +37,13 @@ public class EnemyUnit : Unit
             _cards[cardIndex].ReduceCooldown(amount);
     }
 
+    public override void IncreaseRandomCardCooldown(int amount)
+    {
+        if (_cards == null || _cards.Count == 0) return;
+        int index = Random.Range(0, _cards.Count);
+        _cards[index].IncreaseCooldown(amount);
+    }
+
     public override void OnTurnStart()
     {
         // Tick cooldowns

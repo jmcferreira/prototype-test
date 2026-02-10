@@ -78,6 +78,16 @@ public class PlayerUnit : Unit
         _handUI?.Refresh(Hand);
     }
 
+    public override void IncreaseRandomCardCooldown(int amount)
+    {
+        if (Hand == null || Hand.Cards.Count == 0) return;
+        int index = Random.Range(0, Hand.Cards.Count);
+        var card = Hand.Cards[index];
+        card.IncreaseCooldown(amount);
+        Debug.Log($"  Poison: {card.Data.cardName} cooldown +{amount}");
+        _handUI?.Refresh(Hand);
+    }
+
     private void Update()
     {
         if (_state == State.CardSelected)

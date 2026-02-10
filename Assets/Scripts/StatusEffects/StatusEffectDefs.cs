@@ -34,6 +34,12 @@ public static class StatusEffectDefs
         /// <summary>Stacks removed at the end of each turn (0 = permanent until cleansed).</summary>
         public int DecayPerTurn;
 
+        /// <summary>Flat damage dealt each time the trigger fires (independent of stacks).</summary>
+        public int FlatDamage;
+
+        /// <summary>If > 0, increases a random card's cooldown by this amount on trigger.</summary>
+        public int CooldownPenalty;
+
         /// <summary>If true, the afflicted unit cannot target enemies with attacks.</summary>
         public bool BlocksAttackTargeting;
     }
@@ -62,7 +68,9 @@ public static class StatusEffectDefs
                 IconColor = new Color(0.2f, 0.85f, 0.2f),  // green
                 MaxStacks = 5,
                 DamageTrigger = StatusTrigger.OnTurnEnd,
-                DamagePerStack = 1,
+                DamagePerStack = 0,                         // stacks = duration only
+                FlatDamage = 1,                             // 1 damage per turn end
+                CooldownPenalty = 1,                        // +1 CD on a random card
                 DecayPerTurn = 1,
                 BlocksAttackTargeting = false,
             }

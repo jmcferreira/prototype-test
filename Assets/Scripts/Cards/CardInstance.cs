@@ -30,6 +30,15 @@ public class CardInstance
         Debug.Log($"[{Data.cardName}] cooldown reduced by {amount}: {CooldownRemaining} turns left.");
     }
 
+    /// <summary>
+    /// Increase the cooldown by the given amount. Used by Poison etc.
+    /// </summary>
+    public void IncreaseCooldown(int amount)
+    {
+        CooldownRemaining += amount;
+        Debug.Log($"[{Data.cardName}] cooldown increased by {amount}: {CooldownRemaining} turns left.");
+    }
+
     public CardAction GetAction(int index)
     {
         return Data.actions[index];

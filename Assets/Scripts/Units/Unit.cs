@@ -216,11 +216,17 @@ public abstract class Unit : MonoBehaviour
             if (stacks <= 0) continue;
             if (def.DamageTrigger != trigger) continue;
 
-            int dmg = def.DamagePerStack * stacks;
+            int dmg = def.FlatDamage + def.DamagePerStack * stacks;
             if (dmg > 0)
             {
                 TakeHit(dmg);
                 Debug.Log($"{DisplayName} took {dmg} {def.Name} damage ({stacks} stacks)");
+            }
+
+            if (def.CooldownPenalty > 0)
+            {
+                IncreaseRandomCardCooldown(def.CooldownPenalty);
+                Debug.Log($"{DisplayName} {def.Name}: +{def.CooldownPenalty} CD on a random card");
             }
         }
     }
@@ -269,6 +275,11 @@ public abstract class Unit : MonoBehaviour
     /// Reduce cooldown on a specific card. Override in subclasses that have hands.
     /// </summary>
     public virtual void ReduceCardCooldown(int cardIndex, int amount) { }
+
+    /// <summary>
+    /// Increase cooldown on a random card by amount. Used by Poison etc.
+    /// </summary>
+    public virtual void IncreaseRandomCardCooldown(int amount) { }
 
     /// <summary>Called by TurnManager when this unit's turn begins.</summary>
     public virtual void OnTurnStart() { }
