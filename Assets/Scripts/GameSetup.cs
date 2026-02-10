@@ -63,6 +63,7 @@ public class GameSetup : MonoBehaviour
         attack.cardName = "Strike";
         attack.effect = CardEffect.Attack;
         attack.range = 1;
+        attack.damage = 1;
         attack.cooldown = 2;
 
         var push = ScriptableObject.CreateInstance<CardData>();

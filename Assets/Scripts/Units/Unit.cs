@@ -51,31 +51,7 @@ public abstract class Unit : MonoBehaviour
     }
 
     /// <summary>
-    /// Move this unit to an adjacent hex. Returns true if the move was valid.
-    /// </summary>
-    public bool TryMoveTo(HexCoord target)
-    {
-        if (Coord.DistanceTo(target) != 1) return false;
-        if (!_grid.TryGetTile(target, out _)) return false;
-        if (IsOccupied(target)) return false;
-
-        PlaceAt(target);
-        Debug.Log($"{Team} moved from {Coord} to {target}");
-        Coord = target;
-        return true;
-    }
-
-    private static bool IsOccupied(HexCoord coord)
-    {
-        foreach (var unit in FindObjectsOfType<Unit>())
-        {
-            if (unit.Coord == coord) return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Unconditionally move this unit to a hex (used by card effects like push/pull/dash).
+    /// Move this unit to a hex. Used by card resolvers for move/push/pull.
     /// </summary>
     public void ForceMoveTo(HexCoord target)
     {

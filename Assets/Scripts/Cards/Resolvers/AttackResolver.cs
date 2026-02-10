@@ -17,7 +17,7 @@ public class AttackResolver : ICardResolver
 
     public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        enemy.TakeHit(1);
-        Debug.Log($"Attack: {caster.Team} hit {enemy.Team} for 1 damage.");
+        enemy.TakeHit(data.damage);
+        Debug.Log($"Attack: {caster.Team} hit {enemy.Team} for {data.damage} damage.");
     }
 }

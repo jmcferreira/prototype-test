@@ -15,6 +15,9 @@ public class CardData : ScriptableObject
     [Tooltip("Range in hexes (e.g. attack range, push/pull distance)")]
     [Min(1)] public int range = 1;
 
+    [Tooltip("Damage dealt when this card hits (0 for non-damage cards)")]
+    [Min(0)] public int damage = 0;
+
     [Tooltip("Cooldown in turns after being played (1–5)")]
     [Range(1, 5)] public int cooldown = 1;
 }
