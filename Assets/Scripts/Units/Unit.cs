@@ -38,11 +38,11 @@ public abstract class Unit : MonoBehaviour
         // HP label floating above the unit
         var textGo = new GameObject("HP Label");
         textGo.transform.SetParent(transform);
-        textGo.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+        textGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
         // Rotate to face the top-down camera (text on XZ plane, readable from Y+)
         textGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         _hpText = textGo.AddComponent<TextMesh>();
-        _hpText.characterSize = 0.15f;
+        _hpText.characterSize = 0.2f;
         _hpText.fontSize = 48;
         _hpText.anchor = TextAnchor.MiddleCenter;
         _hpText.alignment = TextAlignment.Center;
@@ -96,7 +96,11 @@ public abstract class Unit : MonoBehaviour
     private void UpdateHPLabel()
     {
         if (_hpText != null)
-            _hpText.text = $"HP:{HP}";
+        {
+            // U+2665 = filled heart, one per HP
+            string hearts = new string('\u2665', Mathf.Max(0, HP));
+            _hpText.text = hearts;
+        }
     }
 
     public HexGrid Grid => _grid;
