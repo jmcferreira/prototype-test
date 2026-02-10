@@ -85,7 +85,14 @@ public class PlayerUnit : Unit
 
     private void HandleCardClicked(int index)
     {
-        if (_state != State.Idle) return;
+        if (_state != State.Idle && _state != State.CardSelected) return;
+
+        // Clicking the already-selected card deselects it
+        if (_state == State.CardSelected && index == _selectedCardIndex)
+        {
+            DeselectCard();
+            return;
+        }
 
         if (Hand == null || index < 0 || index >= Hand.Cards.Count) return;
 
@@ -103,6 +110,13 @@ public class PlayerUnit : Unit
             return;
         }
 
+        // Clear previous selection if switching cards
+        if (_state == State.CardSelected)
+        {
+            ClearTargetHover();
+            ClearHighlights();
+        }
+
         EnterCardSelected(card, index, targets);
     }
 
@@ -112,6 +126,17 @@ public class PlayerUnit : Unit
 
         Debug.Log("Player passed.");
         _turnManager.EndCurrentTurn();
+    }
+
+    private void DeselectCard()
+    {
+        ClearTargetHover();
+        ClearHighlights();
+        _selectedCard = null;
+        _selectedCardIndex = -1;
+        _validTargetSet = null;
+        Debug.Log("Card deselected.");
+        EnterIdle();
     }
 
     // --- CardSelected: waiting for target click ---
@@ -131,6 +156,13 @@ public class PlayerUnit : Unit
 
     private void UpdateCardSelected()
     {
+        // Right-click to cancel selection
+        if (Input.GetMouseButtonDown(1))
+        {
+            DeselectCard();
+            return;
+        }
+
         // Track hover over valid targets
         var tileUnderMouse = _hexInteraction?.GetTileUnderMouse();
         UpdateTargetHover(tileUnderMouse);
