@@ -124,14 +124,16 @@ public class HandUI : MonoBehaviour
             _cardUIs.Add(cardUI);
         }
 
-        // Pass button
-        var passGo = new GameObject("PassButton");
-        passGo.transform.SetParent(panelGo.transform, false);
+        // End Turn button — anchored at top-center, just below the turn banner
+        var passGo = new GameObject("EndTurnButton");
+        passGo.transform.SetParent(transform, false);
 
         var passRect = passGo.AddComponent<RectTransform>();
-        var passLe = passGo.AddComponent<LayoutElement>();
-        passLe.preferredWidth = 140;
-        passLe.preferredHeight = 64;
+        passRect.anchorMin = new Vector2(0.5f, 1f);
+        passRect.anchorMax = new Vector2(0.5f, 1f);
+        passRect.pivot = new Vector2(0.5f, 1f);
+        passRect.anchoredPosition = new Vector2(0f, -85f); // below the 70px banner + gap
+        passRect.sizeDelta = new Vector2(112f, 51f);
 
         var passBg = passGo.AddComponent<Image>();
         passBg.color = new Color(0.85f, 0.75f, 0.65f);
@@ -144,7 +146,7 @@ public class HandUI : MonoBehaviour
         passTextGo.transform.SetParent(passGo.transform, false);
         var passText = passTextGo.AddComponent<Text>();
         passText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        passText.fontSize = 32;
+        passText.fontSize = 26;
         passText.alignment = TextAnchor.MiddleCenter;
         passText.color = Color.black;
         passText.text = "End Turn";
