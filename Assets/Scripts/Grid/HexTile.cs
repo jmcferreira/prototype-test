@@ -2,13 +2,20 @@ using UnityEngine;
 
 /// <summary>
 /// A single hex tile on the grid. Generates its own flat-top hex mesh at Start.
+/// Supports highlight (hover) and selection color states.
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HexTile : MonoBehaviour
 {
+    private static readonly Color DefaultColor  = new Color(0.85f, 0.9f, 0.85f);
+    private static readonly Color HoverColor    = new Color(0.95f, 1f, 0.8f);
+    private static readonly Color SelectedColor = new Color(0.4f, 0.8f, 1f);
+
     public HexCoord Coord { get; private set; }
 
     private static Mesh _sharedHexMesh;
+    private Material _mat;
+    private bool _isSelected;
 
     public void Init(HexCoord coord, float hexSize)
     {
@@ -24,26 +31,31 @@ public class HexTile : MonoBehaviour
 
         GetComponent<MeshFilter>().sharedMesh = _sharedHexMesh;
 
-        // Default material — plain white, unlit so it doesn't need lighting
-        var renderer = GetComponent<MeshRenderer>();
-        if (renderer.sharedMaterial == null)
-        {
-            var mat = new Material(Shader.Find("Unlit/Color"));
-            mat.color = new Color(0.85f, 0.9f, 0.85f);
-            renderer.sharedMaterial = mat;
-        }
+        _mat = new Material(Shader.Find("Unlit/Color"));
+        _mat.color = DefaultColor;
+        GetComponent<MeshRenderer>().material = _mat;
+    }
+
+    public void SetHovered(bool hovered)
+    {
+        if (_isSelected) return;
+        _mat.color = hovered ? HoverColor : DefaultColor;
+    }
+
+    public void SetSelected(bool selected)
+    {
+        _isSelected = selected;
+        _mat.color = selected ? SelectedColor : DefaultColor;
     }
 
     /// <summary>
     /// Creates a flat-top hexagon mesh with the given outer radius.
-    /// Vertices go clockwise starting from the right vertex.
     /// </summary>
     private static Mesh CreateFlatTopHexMesh(float outerRadius)
     {
-        // Shrink slightly so there's a visible gap between tiles
         float r = outerRadius * 0.95f;
-        var verts = new Vector3[7]; // center + 6 corners
-        var tris = new int[18];     // 6 triangles × 3 indices
+        var verts = new Vector3[7];
+        var tris = new int[18];
 
         verts[0] = Vector3.zero;
 

@@ -35,8 +35,13 @@ public class GameSetup : MonoBehaviour
         var enemy = enemyGo.AddComponent<EnemyUnit>();
         enemy.Init(Team.Enemy, enemyCoord, hexGrid);
 
+        // Hex interaction (hover + click)
+        var interactionGo = new GameObject("HexInteraction");
+        var hexInteraction = interactionGo.AddComponent<HexInteraction>();
+
         player.InitHand(starterCards);
         player.SetEnemy(enemy);
+        player.SetHexInteraction(hexInteraction);
 
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();

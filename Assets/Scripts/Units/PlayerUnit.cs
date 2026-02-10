@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Player-controlled unit. Keyboard-only card flow:
+/// Player-controlled unit. During their turn:
 ///   1–4: select a card
-///   For Move: Q/W/E/A/S/D to pick hex direction (E/NE/NW/W/SW/SE)
+///   For Move: click a hex or use Q/W/E/A/S/D for direction
 ///   For Attack/Push/Pull: auto-targets the enemy
 ///   Space: end turn without playing a card
 ///   Escape: cancel card selection
@@ -15,6 +15,7 @@ public class PlayerUnit : Unit
     private bool _canAct;
     private CardInstance _selectedCard;
     private Unit _enemy;
+    private HexInteraction _hexInteraction;
 
     public void InitHand(CardData[] cardDatas)
     {
@@ -24,6 +25,11 @@ public class PlayerUnit : Unit
     public void SetEnemy(Unit enemy)
     {
         _enemy = enemy;
+    }
+
+    public void SetHexInteraction(HexInteraction hexInteraction)
+    {
+        _hexInteraction = hexInteraction;
     }
 
     public override void OnTurnStart()
@@ -41,6 +47,7 @@ public class PlayerUnit : Unit
     {
         _canAct = false;
         _selectedCard = null;
+        _hexInteraction?.ClearSelection();
     }
 
     private void Update()
@@ -69,18 +76,17 @@ public class PlayerUnit : Unit
             if (card.Data.effect == CardEffect.Move)
             {
                 _selectedCard = card;
-                Debug.Log($"[{card.Data.cardName}] selected — pick direction: Q=E, W=NE, E=NW, A=W, S=SW, D=SE");
+                Debug.Log($"[{card.Data.cardName}] selected — click a hex or pick direction: Q=E, W=NE, E=NW, A=W, S=SW, D=SE");
             }
             else
             {
-                // Auto-target the enemy for Attack/Push/Pull
                 bool success = CardEffectExecutor.Execute(card, this, _enemy, Grid);
                 if (!success)
                 {
                     card.ResetCooldown();
                     Debug.Log("Effect failed — card cooldown refunded.");
                 }
-                _canAct = false;
+                FinishAction();
             }
             break;
         }
@@ -92,12 +98,13 @@ public class PlayerUnit : Unit
         {
             _selectedCard.ResetCooldown();
             _selectedCard = null;
+            _hexInteraction?.ClearSelection();
             Debug.Log("Card cancelled — cooldown refunded.");
             Debug.Log("Press 1-4 to play a card, Space to end turn.");
             return;
         }
 
-        // Direction keys: Q=E(0), W=NE(1), E=NW(2), A=W(3), S=SW(4), D=SE(5)
+        // Keyboard direction: Q=E(0), W=NE(1), E=NW(2), A=W(3), S=SW(4), D=SE(5)
         int dir = -1;
         if (Input.GetKeyDown(KeyCode.Q)) dir = 0;
         else if (Input.GetKeyDown(KeyCode.W)) dir = 1;
@@ -106,16 +113,59 @@ public class PlayerUnit : Unit
         else if (Input.GetKeyDown(KeyCode.S)) dir = 4;
         else if (Input.GetKeyDown(KeyCode.D)) dir = 5;
 
-        if (dir < 0) return;
-
-        bool success = CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, dir);
-        if (!success)
+        if (dir >= 0)
         {
-            _selectedCard.ResetCooldown();
-            Debug.Log("Move failed — card cooldown refunded.");
+            bool success = CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, dir);
+            if (!success)
+            {
+                _selectedCard.ResetCooldown();
+                Debug.Log("Move failed — card cooldown refunded.");
+            }
+            _selectedCard = null;
+            FinishAction();
+            return;
         }
 
-        _selectedCard = null;
+        // Mouse click: use the selected tile from HexInteraction
+        if (_hexInteraction != null && _hexInteraction.SelectedTile != null && Input.GetMouseButtonDown(0))
+        {
+            HexCoord target = _hexInteraction.SelectedTile.Coord;
+            // Find which direction this hex is relative to us and walk there
+            bool success = TryMoveToward(target);
+            if (!success)
+            {
+                _selectedCard.ResetCooldown();
+                Debug.Log("Move failed — card cooldown refunded.");
+            }
+            _selectedCard = null;
+            FinishAction();
+        }
+    }
+
+    private bool TryMoveToward(HexCoord target)
+    {
+        // Find the direction from current coord toward the target
+        int bestDir = -1;
+        int bestDist = int.MaxValue;
+
+        for (int i = 0; i < 6; i++)
+        {
+            HexCoord neighbor = Coord.Neighbor(i);
+            int dist = neighbor.DistanceTo(target);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                bestDir = i;
+            }
+        }
+
+        if (bestDir < 0) return false;
+        return CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, bestDir);
+    }
+
+    private void FinishAction()
+    {
         _canAct = false;
+        _hexInteraction?.ClearSelection();
     }
 }
