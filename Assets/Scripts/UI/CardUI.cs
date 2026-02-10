@@ -32,8 +32,8 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private static readonly Color HeaderBg = new Color(0.18f, 0.16f, 0.12f);
 
-    private static readonly Vector3 NormalScale = Vector3.one;
-    private static readonly Vector3 HoverScale  = new Vector3(1.05f, 1.05f, 1f);
+    private static readonly Vector3 NormalScale = new Vector3(0.7f, 0.7f, 1f);
+    private static readonly Vector3 HoverScale  = Vector3.one;
 
     private bool _selected;
     private bool _hovered;
@@ -44,6 +44,8 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     /// </summary>
     public void Build(CardData data)
     {
+        transform.localScale = NormalScale;
+
         // Outer border (acts as the card edge / gold rim)
         _borderImage = gameObject.AddComponent<Image>();
         _borderImage.color = BorderReady;
