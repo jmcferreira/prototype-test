@@ -45,6 +45,7 @@ public class GameSetup : MonoBehaviour
 
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
+        player.SetTurnManager(turnManager);
         turnManager.Begin(player, enemy);
 
         Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
