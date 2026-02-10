@@ -24,7 +24,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private static readonly Color SelectedColor = new Color(0.6f, 0.85f, 1f);
 
     private static readonly Vector3 NormalScale = Vector3.one;
-    private static readonly Vector3 HoverScale = new Vector3(1.1f, 1.1f, 1f);
+    private static readonly Vector3 HoverScale = new Vector3(1.2f, 1.2f, 1f);
 
     private bool _selected;
     private bool _hovered;

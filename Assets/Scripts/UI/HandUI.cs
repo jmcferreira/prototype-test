@@ -53,7 +53,7 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 110f);
+        bgRect.sizeDelta = new Vector2(0f, 130f);
 
         // Action step label + Skip button (above cards, hidden by default)
         BuildActionStepUI();
@@ -85,8 +85,8 @@ public class HandUI : MonoBehaviour
 
             var cardRect = cardGo.AddComponent<RectTransform>();
             var le = cardGo.AddComponent<LayoutElement>();
-            le.preferredWidth = 100;
-            le.preferredHeight = 70;
+            le.preferredWidth = 130;
+            le.preferredHeight = 90;
 
             var cardUI = cardGo.AddComponent<CardUI>();
             cardUI.Build();
@@ -140,7 +140,7 @@ public class HandUI : MonoBehaviour
         stepRect.anchorMin = new Vector2(0.5f, 0f);
         stepRect.anchorMax = new Vector2(0.5f, 0f);
         stepRect.pivot = new Vector2(0.5f, 0f);
-        stepRect.anchoredPosition = new Vector2(0f, 85f);
+        stepRect.anchoredPosition = new Vector2(0f, 105f);
 
         var stepLayout = _actionStepGo.AddComponent<HorizontalLayoutGroup>();
         stepLayout.spacing = 10;
