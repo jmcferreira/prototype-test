@@ -4,7 +4,9 @@
 public enum CardEffect
 {
     Move,
+    Dash,
     Attack,
     Push,
     Pull,
+    Heal,
 }

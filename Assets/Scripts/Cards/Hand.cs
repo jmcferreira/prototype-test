@@ -53,9 +53,11 @@ public class Hand
         switch (action.effect)
         {
             case CardEffect.Move:   return $"Move {action.range}";
+            case CardEffect.Dash:   return $"Dash {action.range}";
             case CardEffect.Attack: return $"Atk {action.damage} Rng {action.range}";
             case CardEffect.Push:   return $"Push {action.pushDistance} Rng {action.range}";
             case CardEffect.Pull:   return $"Pull {action.pushDistance} Rng {action.range}";
+            case CardEffect.Heal:   return $"Heal {action.damage}";
             default:                return action.effect.ToString();
         }
     }

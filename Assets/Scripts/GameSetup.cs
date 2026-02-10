@@ -70,36 +70,43 @@ public class GameSetup : MonoBehaviour
 
     private static CardData[] CreateDefaultPlayerCards()
     {
-        // Dash: Move 2
-        var dash = ScriptableObject.CreateInstance<CardData>();
-        dash.cardName = "Dash";
-        dash.actions = new[] { new CardAction { effect = CardEffect.Move, range = 2 } };
-        dash.cooldown = 1;
-
-        // Dash Strike: Move 2 → Attack 1 → Push 1
+        // Card 1 — Dash Strike: Dash 2 (mandatory) → Attack 1
         var dashStrike = ScriptableObject.CreateInstance<CardData>();
         dashStrike.cardName = "Dash Strike";
         dashStrike.actions = new[]
         {
-            new CardAction { effect = CardEffect.Move, range = 2 },
+            new CardAction { effect = CardEffect.Dash, range = 2, mandatory = true },
             new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 },
-            new CardAction { effect = CardEffect.Push, range = 1, pushDistance = 1 },
         };
-        dashStrike.cooldown = 3;
+        dashStrike.cooldown = 2;
 
-        // Strike: Attack 1
-        var strike = ScriptableObject.CreateInstance<CardData>();
-        strike.cardName = "Strike";
-        strike.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 } };
-        strike.cooldown = 2;
+        // Card 2 — Fireshot: Attack 1 Range 3
+        var fireshot = ScriptableObject.CreateInstance<CardData>();
+        fireshot.cardName = "Fireshot";
+        fireshot.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 } };
+        fireshot.cooldown = 2;
 
-        // Hook: Pull 2 (range 3)
+        // Card 3 — Exorcize: Attack 1 → Push 2
+        var exorcize = ScriptableObject.CreateInstance<CardData>();
+        exorcize.cardName = "Exorcize";
+        exorcize.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 },
+            new CardAction { effect = CardEffect.Push, range = 1, pushDistance = 2 },
+        };
+        exorcize.cooldown = 2;
+
+        // Card 4 — Grappling Hook: Pull 2 Range 3 → Heal 1
         var hook = ScriptableObject.CreateInstance<CardData>();
-        hook.cardName = "Hook";
-        hook.actions = new[] { new CardAction { effect = CardEffect.Pull, range = 3, pushDistance = 2 } };
+        hook.cardName = "Grappling Hook";
+        hook.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Pull, range = 3, pushDistance = 2 },
+            new CardAction { effect = CardEffect.Heal, range = 1, damage = 1 },
+        };
         hook.cooldown = 3;
 
-        return new[] { dash, dashStrike, strike, hook };
+        return new[] { dashStrike, fireshot, exorcize, hook };
     }
 
     private static CardData[] CreateDefaultEnemyCards()

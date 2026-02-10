@@ -12,4 +12,7 @@ public class CardAction
     [Min(1)] public int range = 1;
     [Min(0)] public int damage = 0;
     [Min(0)] public int pushDistance = 1;
+
+    [Tooltip("If true, this action cannot be skipped by the player")]
+    public bool mandatory;
 }

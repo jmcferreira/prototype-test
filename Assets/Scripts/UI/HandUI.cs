@@ -19,6 +19,7 @@ public class HandUI : MonoBehaviour
     private Canvas _canvas;
     private GameObject _actionStepGo;
     private Text _actionStepText;
+    private GameObject _skipButtonGo;
 
     /// <summary>
     /// Build the UI from the given hand. Call once after the hand is created.
@@ -163,8 +164,9 @@ public class HandUI : MonoBehaviour
         labelLe.preferredHeight = 24;
 
         // Skip button
-        var skipGo = new GameObject("SkipButton");
-        skipGo.transform.SetParent(_actionStepGo.transform, false);
+        _skipButtonGo = new GameObject("SkipButton");
+        _skipButtonGo.transform.SetParent(_actionStepGo.transform, false);
+        var skipGo = _skipButtonGo;
 
         var skipLe = skipGo.AddComponent<LayoutElement>();
         skipLe.preferredWidth = 50;
@@ -224,9 +226,10 @@ public class HandUI : MonoBehaviour
     /// <summary>
     /// Show the current action step indicator above the cards.
     /// </summary>
-    public void ShowActionStep(int step, int total, string description)
+    public void ShowActionStep(int step, int total, string description, bool canSkip = true)
     {
         _actionStepText.text = $"Step {step}/{total}: {description}";
+        _skipButtonGo.SetActive(canSkip);
         _actionStepGo.SetActive(true);
     }
 

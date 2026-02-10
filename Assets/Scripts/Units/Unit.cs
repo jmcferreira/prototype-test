@@ -10,6 +10,7 @@ public abstract class Unit : MonoBehaviour
     public Team Team { get; private set; }
     public HexCoord Coord { get; private set; }
     public int HP { get; private set; } = 3;
+    public int MaxHP { get; private set; } = 3;
     public bool IsAlive => HP > 0;
 
     private HexGrid _grid;
@@ -67,6 +68,16 @@ public abstract class Unit : MonoBehaviour
         HP -= damage;
         UpdateHPLabel();
         Debug.Log($"{Team} took {damage} damage — HP: {HP}");
+    }
+
+    /// <summary>
+    /// Recover HP, capped at MaxHP.
+    /// </summary>
+    public void Heal(int amount)
+    {
+        HP = Mathf.Min(HP + amount, MaxHP);
+        UpdateHPLabel();
+        Debug.Log($"{Team} healed {amount} — HP: {HP}");
     }
 
     private void UpdateHPLabel()

@@ -121,6 +121,8 @@ public class PlayerUnit : Unit
     private void HandleSkipClicked()
     {
         if (_state != State.CardSelected) return;
+        var action = _selectedCard.GetAction(_currentActionIndex);
+        if (action.mandatory) return; // can't skip mandatory actions
         SkipCurrentAction();
     }
 
@@ -168,8 +170,10 @@ public class PlayerUnit : Unit
         HighlightTargets(true);
 
         string desc = Hand.DescribeAction(action);
-        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc);
-        Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc} — click a target or skip.");
+        bool canSkip = !action.mandatory;
+        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc, canSkip);
+        string hint = canSkip ? "click a target or skip" : "click a target (mandatory)";
+        Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc} — {hint}.");
     }
 
     private void UpdateCardSelected()
