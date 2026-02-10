@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Attack: deal 1 damage to the enemy if they're within range.
-/// Valid target is the enemy's hex (if in range).
+/// Attack: deal card.damage to the enemy if within card.range hex distance.
+/// Valid target is the enemy's hex.
 /// </summary>
 public class AttackResolver : ICardResolver
 {

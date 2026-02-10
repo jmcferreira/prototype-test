@@ -34,7 +34,8 @@ public class Hand
         {
             var c = _cards[i];
             string status = c.IsReady ? "READY" : $"cd:{c.CooldownRemaining}";
-            Debug.Log($"  [{i + 1}] {c.Data.cardName} ({c.Data.effect}, range:{c.Data.range}) — {status}");
+            string dmg = c.Data.damage > 0 ? $", dmg:{c.Data.damage}" : "";
+            Debug.Log($"  [{i + 1}] {c.Data.cardName} ({c.Data.effect}, range:{c.Data.range}{dmg}) — {status}");
         }
     }
 }
