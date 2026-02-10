@@ -40,11 +40,21 @@ public abstract class Unit : MonoBehaviour
     {
         if (Coord.DistanceTo(target) != 1) return false;
         if (!_grid.TryGetTile(target, out _)) return false;
+        if (IsOccupied(target)) return false;
 
         PlaceAt(target);
         Debug.Log($"{Team} moved from {Coord} to {target}");
         Coord = target;
         return true;
+    }
+
+    private static bool IsOccupied(HexCoord coord)
+    {
+        foreach (var unit in FindObjectsOfType<Unit>())
+        {
+            if (unit.Coord == coord) return true;
+        }
+        return false;
     }
 
     private void PlaceAt(HexCoord coord)
