@@ -2,19 +2,23 @@ using UnityEngine;
 
 /// <summary>
 /// Bootstraps the game: waits for the grid, spawns units, starts the turn loop.
-/// Attach to the same GameObject as HexGrid, or any object in the scene.
+/// Assign card assets in the Inspector to tweak stats without code changes.
 /// </summary>
 public class GameSetup : MonoBehaviour
 {
     [SerializeField] private HexGrid hexGrid;
-    [SerializeField] private CardData[] starterCards;
+
+    [Header("Player Cards (drag CardData assets here)")]
+    [SerializeField] private CardData[] playerCards;
+
+    [Header("Enemy Cards (drag CardData assets here, priority order)")]
+    [SerializeField] private CardData[] enemyCards;
 
     private void Start()
     {
         if (hexGrid == null)
             hexGrid = FindObjectOfType<HexGrid>();
 
-        // Wait one frame so HexGrid.Start() has run
         Invoke(nameof(Setup), 0f);
     }
 
@@ -27,21 +31,26 @@ public class GameSetup : MonoBehaviour
         var player = playerGo.AddComponent<PlayerUnit>();
         player.Init(Team.Player, playerCoord, hexGrid);
 
-        // Build fallback cards at runtime if none assigned in the Inspector
-        if (starterCards == null || starterCards.Length == 0)
-            starterCards = CreateDefaultCards();
+        // Load from Inspector or fall back to Resources/Cards
+        if (playerCards == null || playerCards.Length == 0)
+            playerCards = Resources.LoadAll<CardData>("Cards/Player");
+        if (enemyCards == null || enemyCards.Length == 0)
+            enemyCards = Resources.LoadAll<CardData>("Cards/Enemy");
+
+        // Final fallback: create in code
+        if (playerCards.Length == 0) playerCards = CreateDefaultPlayerCards();
+        if (enemyCards.Length == 0) enemyCards = CreateDefaultEnemyCards();
 
         var enemyGo = new GameObject();
         var enemy = enemyGo.AddComponent<EnemyUnit>();
         enemy.Init(Team.Enemy, enemyCoord, hexGrid);
-        enemy.InitCards(CreateEnemyCards());
+        enemy.InitCards(enemyCards);
         enemy.SetPlayer(player);
 
-        // Hex interaction (hover + click)
         var interactionGo = new GameObject("HexInteraction");
         var hexInteraction = interactionGo.AddComponent<HexInteraction>();
 
-        player.InitHand(starterCards);
+        player.InitHand(playerCards);
         player.SetEnemy(enemy);
         player.SetHexInteraction(hexInteraction);
 
@@ -54,7 +63,7 @@ public class GameSetup : MonoBehaviour
         Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
     }
 
-    private static CardData[] CreateDefaultCards()
+    private static CardData[] CreateDefaultPlayerCards()
     {
         var move = ScriptableObject.CreateInstance<CardData>();
         move.cardName = "Dash";
@@ -84,9 +93,8 @@ public class GameSetup : MonoBehaviour
         return new[] { move, attack, push, pull };
     }
 
-    private static CardData[] CreateEnemyCards()
+    private static CardData[] CreateDefaultEnemyCards()
     {
-        // Attack first (priority), then move toward player
         var attack = ScriptableObject.CreateInstance<CardData>();
         attack.cardName = "Claw";
         attack.effect = CardEffect.Attack;
