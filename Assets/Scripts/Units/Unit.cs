@@ -14,6 +14,7 @@ public abstract class Unit : MonoBehaviour
 
     private HexGrid _grid;
     private float _hexSize;
+    private TextMesh _hpText;
 
     public void Init(Team team, HexCoord startCoord, HexGrid grid)
     {
@@ -33,6 +34,20 @@ public abstract class Unit : MonoBehaviour
         var mat = new Material(Shader.Find("Unlit/Color"));
         mat.color = team == Team.Player ? Color.blue : Color.red;
         cube.GetComponent<MeshRenderer>().material = mat;
+
+        // HP label floating above the unit
+        var textGo = new GameObject("HP Label");
+        textGo.transform.SetParent(transform);
+        textGo.transform.localPosition = new Vector3(0f, 0.8f, 0f);
+        // Rotate to face the top-down camera (text on XZ plane, readable from Y+)
+        textGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        _hpText = textGo.AddComponent<TextMesh>();
+        _hpText.characterSize = 0.15f;
+        _hpText.fontSize = 48;
+        _hpText.anchor = TextAnchor.MiddleCenter;
+        _hpText.alignment = TextAlignment.Center;
+        _hpText.color = Color.white;
+        UpdateHPLabel();
     }
 
     /// <summary>
@@ -74,7 +89,14 @@ public abstract class Unit : MonoBehaviour
     public void TakeHit(int damage)
     {
         HP -= damage;
+        UpdateHPLabel();
         Debug.Log($"{Team} took {damage} damage — HP: {HP}");
+    }
+
+    private void UpdateHPLabel()
+    {
+        if (_hpText != null)
+            _hpText.text = $"HP:{HP}";
     }
 
     public HexGrid Grid => _grid;
