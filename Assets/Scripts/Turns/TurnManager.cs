@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,6 +14,9 @@ public class TurnManager : MonoBehaviour
     public Unit CurrentUnit => _turnOrder.Count > 0 ? _turnOrder[_currentIndex] : null;
     public Team CurrentTeam => CurrentUnit != null ? CurrentUnit.Team : Team.Player;
     public int TurnNumber { get; private set; } = 1;
+
+    /// <summary>Fired when the active unit changes (at game start and after each turn ends).</summary>
+    public event Action<Unit> OnTurnChanged;
 
     /// <summary>All units registered in the turn order (alive or dead).</summary>
     public IReadOnlyList<Unit> AllUnits => _turnOrder;
@@ -34,6 +38,7 @@ public class TurnManager : MonoBehaviour
         _currentIndex = 0;
         TurnNumber = 1;
         Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        OnTurnChanged?.Invoke(CurrentUnit);
         CurrentUnit.OnTurnStart();
     }
 
@@ -70,6 +75,7 @@ public class TurnManager : MonoBehaviour
         } while (!_turnOrder[_currentIndex].IsAlive && _currentIndex != startIndex);
 
         Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        OnTurnChanged?.Invoke(CurrentUnit);
         CurrentUnit.OnTurnStart();
     }
 }

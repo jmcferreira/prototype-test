@@ -111,6 +111,12 @@ public class GameSetup : MonoBehaviour
             panel.Init(enemies[i], turnManager, false, i);
         }
 
+        // Turn banner (top of screen)
+        var bannerGo = new GameObject("TurnBanner");
+        bannerGo.transform.SetParent(uiGo.transform, false);
+        var banner = bannerGo.AddComponent<TurnBannerUI>();
+        banner.Init(turnManager);
+
         // --- Start the game ---
         var turnOrder = new List<Unit> { player, spider1, spider2, orc };
         turnManager.Begin(turnOrder);
