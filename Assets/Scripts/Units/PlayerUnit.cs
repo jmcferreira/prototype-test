@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Player-controlled unit with an explicit two-state interaction model:
-///   Idle         → press 1–4 to select a card, or Space to end turn
+///   Idle         → click a card in the HandUI to select it, or click Pass
 ///   CardSelected → valid targets highlighted, click one to resolve and end turn
 /// </summary>
 public class PlayerUnit : Unit
@@ -14,10 +14,12 @@ public class PlayerUnit : Unit
 
     private State _state = State.Inactive;
     private CardInstance _selectedCard;
+    private int _selectedCardIndex = -1;
     private List<HexCoord> _validTargets;
     private Unit _enemy;
     private HexInteraction _hexInteraction;
     private TurnManager _turnManager;
+    private HandUI _handUI;
 
     public void InitHand(CardData[] cardDatas)
     {
@@ -39,12 +41,18 @@ public class PlayerUnit : Unit
         _turnManager = turnManager;
     }
 
+    public void SetHandUI(HandUI handUI)
+    {
+        _handUI = handUI;
+        _handUI.OnCardClicked += HandleCardClicked;
+        _handUI.OnPassClicked += HandlePassClicked;
+    }
+
     public override void OnTurnStart()
     {
         Hand?.TickCooldowns();
-        Debug.Log("--- Your hand ---");
-        Hand?.LogHand();
-        Debug.Log("Press 1-4 to play a card, Space to end turn.");
+        _handUI?.Refresh(Hand);
+        Debug.Log("--- Your turn — pick a card or pass. ---");
         EnterIdle();
     }
 
@@ -52,71 +60,65 @@ public class PlayerUnit : Unit
     {
         ClearHighlights();
         _selectedCard = null;
-        _validTargets = null;
+        _selectedCardIndex = -1;
+        _handUI?.SetSelectedCard(-1);
         _state = State.Inactive;
     }
 
     private void Update()
     {
-        switch (_state)
-        {
-            case State.Idle:
-                UpdateIdle();
-                break;
-            case State.CardSelected:
-                UpdateCardSelected();
-                break;
-        }
+        if (_state == State.CardSelected)
+            UpdateCardSelected();
     }
 
-    // --- Idle: waiting for card selection or pass ---
+    // --- Idle: waiting for card click from HandUI ---
 
     private void EnterIdle()
     {
         _state = State.Idle;
+        _handUI?.SetSelectedCard(-1);
     }
 
-    private void UpdateIdle()
+    private void HandleCardClicked(int index)
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (_state != State.Idle) return;
+
+        if (Hand == null || index < 0 || index >= Hand.Cards.Count) return;
+
+        var card = Hand.Cards[index];
+        if (!card.IsReady)
         {
-            Debug.Log("Player passed.");
-            _turnManager.EndCurrentTurn();
+            Debug.Log($"[{card.Data.cardName}] on cooldown ({card.CooldownRemaining} turns).");
             return;
         }
 
-        for (int i = 0; i < 4; i++)
+        var targets = card.GetValidTargets(this, _enemy, Grid);
+        if (targets.Count == 0)
         {
-            if (!Input.GetKeyDown(KeyCode.Alpha1 + i)) continue;
-
-            var card = Hand?.Cards[i];
-            if (card == null || !card.IsReady)
-            {
-                Debug.Log(card == null
-                    ? $"No card at slot {i + 1}."
-                    : $"[{card.Data.cardName}] on cooldown ({card.CooldownRemaining} turns).");
-                break;
-            }
-
-            var targets = card.GetValidTargets(this, _enemy, Grid);
-            if (targets.Count == 0)
-            {
-                Debug.Log($"[{card.Data.cardName}] has no valid targets.");
-                break;
-            }
-
-            EnterCardSelected(card, targets);
-            break;
+            Debug.Log($"[{card.Data.cardName}] has no valid targets.");
+            return;
         }
+
+        EnterCardSelected(card, index, targets);
+    }
+
+    private void HandlePassClicked()
+    {
+        if (_state != State.Idle) return;
+
+        Debug.Log("Player passed.");
+        _turnManager.EndCurrentTurn();
     }
 
     // --- CardSelected: waiting for target click ---
 
-    private void EnterCardSelected(CardInstance card, List<HexCoord> targets)
+    private void EnterCardSelected(CardInstance card, int index, List<HexCoord> targets)
     {
         _selectedCard = card;
+        _selectedCardIndex = index;
         _validTargets = targets;
         HighlightTargets(true);
+        _handUI?.SetSelectedCard(index);
         _state = State.CardSelected;
         Debug.Log($"[{card.Data.cardName}] selected — click a highlighted hex to resolve.");
     }
@@ -141,7 +143,9 @@ public class PlayerUnit : Unit
         ClearHighlights();
         _hexInteraction?.ClearSelection();
         _selectedCard = null;
-        _validTargets = null;
+        _selectedCardIndex = -1;
+        _handUI?.SetSelectedCard(-1);
+        _handUI?.Refresh(Hand);
         _turnManager.EndCurrentTurn();
     }
 

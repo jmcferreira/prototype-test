@@ -54,6 +54,11 @@ public class GameSetup : MonoBehaviour
         player.SetEnemy(enemy);
         player.SetHexInteraction(hexInteraction);
 
+        var handUIGo = new GameObject("HandUI");
+        var handUI = handUIGo.AddComponent<HandUI>();
+        handUI.Init(player.Hand);
+        player.SetHandUI(handUI);
+
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
         player.SetTurnManager(turnManager);
