@@ -13,6 +13,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public event Action OnClicked;
 
     private Text _nameText;
+    private Text _descText;
     private Text _cooldownText;
     private Button _button;
     private Image _background;
@@ -48,33 +49,49 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         colors.disabledColor = Color.white;
         _button.colors = colors;
 
-        // Card name
+        // Card name (top third)
         var nameGo = new GameObject("Name");
         nameGo.transform.SetParent(transform, false);
         _nameText = nameGo.AddComponent<Text>();
         _nameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _nameText.fontSize = 16;
+        _nameText.fontSize = 14;
+        _nameText.fontStyle = FontStyle.Bold;
         _nameText.alignment = TextAnchor.MiddleCenter;
         _nameText.color = Color.black;
 
         var nameRect = nameGo.GetComponent<RectTransform>();
-        nameRect.anchorMin = new Vector2(0, 0.45f);
+        nameRect.anchorMin = new Vector2(0, 0.66f);
         nameRect.anchorMax = new Vector2(1, 1f);
         nameRect.offsetMin = Vector2.zero;
         nameRect.offsetMax = Vector2.zero;
 
-        // Cooldown text
+        // Effect description (middle third)
+        var descGo = new GameObject("Description");
+        descGo.transform.SetParent(transform, false);
+        _descText = descGo.AddComponent<Text>();
+        _descText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _descText.fontSize = 12;
+        _descText.alignment = TextAnchor.MiddleCenter;
+        _descText.color = new Color(0.2f, 0.2f, 0.2f);
+
+        var descRect = descGo.GetComponent<RectTransform>();
+        descRect.anchorMin = new Vector2(0, 0.33f);
+        descRect.anchorMax = new Vector2(1, 0.66f);
+        descRect.offsetMin = Vector2.zero;
+        descRect.offsetMax = Vector2.zero;
+
+        // Cooldown text (bottom third)
         var cdGo = new GameObject("Cooldown");
         cdGo.transform.SetParent(transform, false);
         _cooldownText = cdGo.AddComponent<Text>();
         _cooldownText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _cooldownText.fontSize = 13;
+        _cooldownText.fontSize = 11;
         _cooldownText.alignment = TextAnchor.MiddleCenter;
-        _cooldownText.color = new Color(0.3f, 0.3f, 0.3f);
+        _cooldownText.color = new Color(0.35f, 0.35f, 0.35f);
 
         var cdRect = cdGo.GetComponent<RectTransform>();
         cdRect.anchorMin = new Vector2(0, 0f);
-        cdRect.anchorMax = new Vector2(1, 0.45f);
+        cdRect.anchorMax = new Vector2(1, 0.33f);
         cdRect.offsetMin = Vector2.zero;
         cdRect.offsetMax = Vector2.zero;
     }
@@ -82,9 +99,10 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     /// <summary>
     /// Refresh the card display with current data. Call whenever state changes.
     /// </summary>
-    public void Refresh(string cardName, int cooldownRemaining, int cooldownMax, bool isReady)
+    public void Refresh(string cardName, string description, int cooldownRemaining, int cooldownMax, bool isReady)
     {
         _nameText.text = cardName;
+        _descText.text = description;
         _cooldownText.text = isReady ? "Ready" : $"CD: {cooldownRemaining}/{cooldownMax}";
 
         _button.interactable = isReady;

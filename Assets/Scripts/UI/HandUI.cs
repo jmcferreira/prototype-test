@@ -135,10 +135,23 @@ public class HandUI : MonoBehaviour
             var card = hand.Cards[i];
             _cardUIs[i].Refresh(
                 card.Data.cardName,
+                DescribeCard(card.Data),
                 card.CooldownRemaining,
                 card.Data.cooldown,
                 card.IsReady
             );
+        }
+    }
+
+    private static string DescribeCard(CardData data)
+    {
+        switch (data.effect)
+        {
+            case CardEffect.Move:   return $"Move {data.range}";
+            case CardEffect.Attack: return $"Attack {data.damage}, Rng {data.range}";
+            case CardEffect.Push:   return $"Push {data.pushDistance}, Rng {data.range}";
+            case CardEffect.Pull:   return $"Pull {data.pushDistance}, Rng {data.range}";
+            default:                return data.effect.ToString();
         }
     }
 
