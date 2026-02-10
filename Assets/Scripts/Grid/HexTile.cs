@@ -57,8 +57,8 @@ public class HexTile : MonoBehaviour
         for (int i = 0; i < 6; i++)
         {
             tris[i * 3 + 0] = 0;
-            tris[i * 3 + 1] = i + 1;
-            tris[i * 3 + 2] = (i < 5) ? i + 2 : 1;
+            tris[i * 3 + 1] = (i < 5) ? i + 2 : 1;
+            tris[i * 3 + 2] = i + 1;
         }
 
         var mesh = new Mesh
