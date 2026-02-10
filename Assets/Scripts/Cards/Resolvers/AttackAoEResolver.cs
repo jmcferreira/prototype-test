@@ -28,9 +28,14 @@ public class AttackAoEResolver : ICardResolver
             if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
             {
-                unit.TakeHit(action.damage);
+                // Consume Burn: bonus damage equal to stacks, then remove all
+                int burnStacks = unit.ConsumeStatus(StatusEffectType.Burn);
+                int dmg = action.damage + burnStacks;
+
+                unit.TakeHit(dmg);
                 hitCount++;
-                Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {action.damage} damage.");
+                Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage" +
+                          (burnStacks > 0 ? $" (+{burnStacks} Burn)." : "."));
             }
         }
         Debug.Log($"AoE: {caster.DisplayName} hit {hitCount} target(s) total.");

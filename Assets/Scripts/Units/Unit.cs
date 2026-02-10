@@ -224,6 +224,21 @@ public abstract class Unit : MonoBehaviour
     public bool HasStatus(StatusEffectType type) => GetStatusStacks(type) > 0;
 
     /// <summary>
+    /// Remove all stacks of a status and return how many were consumed.
+    /// Used by Burn (consumed on next attack hit).
+    /// </summary>
+    public int ConsumeStatus(StatusEffectType type)
+    {
+        int stacks = GetStatusStacks(type);
+        if (stacks <= 0) return 0;
+        _statuses.Remove(type);
+        var def = StatusEffectDefs.Get(type);
+        Debug.Log($"{DisplayName} {def.Name} consumed ({stacks} stacks).");
+        NotifyChanged();
+        return stacks;
+    }
+
+    /// <summary>
     /// Fire all statuses that match the given trigger. Called generically —
     /// pass OnAction after each action resolve, OnTurnEnd at end of turn.
     /// </summary>

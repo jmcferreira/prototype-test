@@ -46,8 +46,13 @@ public class AttackLineResolver : ICardResolver
 
             if (hitUnit == null) continue;
 
-            hitUnit.TakeHit(action.damage);
-            Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {action.damage} damage.");
+            // Consume Burn: bonus damage equal to stacks, then remove all
+            int burnStacks = hitUnit.ConsumeStatus(StatusEffectType.Burn);
+            int dmg = action.damage + burnStacks;
+
+            hitUnit.TakeHit(dmg);
+            Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {dmg} damage" +
+                      (burnStacks > 0 ? $" (+{burnStacks} Burn)." : "."));
 
             if (action.statusStacks > 0)
             {

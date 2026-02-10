@@ -53,10 +53,10 @@ public static class StatusEffectDefs
                 Name = "Burn",
                 Icon = "\u25B2",                            // ▲ flame-like triangle
                 IconColor = new Color(1f, 0.5f, 0f),       // orange
-                MaxStacks = 3,
-                DamageTrigger = StatusTrigger.OnAction,
-                DamagePerStack = 1,
-                DecayPerTurn = 0,
+                MaxStacks = 5,
+                DamageTrigger = StatusTrigger.None,         // consumed on next attack hit
+                DamagePerStack = 0,
+                DecayPerTurn = 0,                           // persists until consumed
                 BlocksAttackTargeting = false,
             }
         },
