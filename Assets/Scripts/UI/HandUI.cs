@@ -80,7 +80,7 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 300f);
+        bgRect.sizeDelta = new Vector2(0f, 200f);
 
         // Old action step UI (hidden — replaced by expanded card)
         BuildActionStepUI();
@@ -92,7 +92,7 @@ public class HandUI : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0f);
         panelRect.anchorMax = new Vector2(0.5f, 0f);
         panelRect.pivot = new Vector2(0.5f, 0f);
-        panelRect.anchoredPosition = new Vector2(0f, 15f);
+        panelRect.anchoredPosition = new Vector2(0f, -42f);
 
         var layout = panelGo.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = -20;

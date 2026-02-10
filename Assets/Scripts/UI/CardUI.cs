@@ -35,9 +35,13 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private static readonly Vector3 NormalScale = new Vector3(0.7f, 0.7f, 1f);
     private static readonly Vector3 HoverScale  = Vector3.one;
 
+    private const float HoverLift = 42f; // 10% of 420px card height
+
     private bool _selected;
     private bool _hovered;
     private bool _isReady;
+    private float _baseLocalY;
+    private bool _captured;
 
     /// <summary>
     /// Build the card's UI elements from a CardData. Call once at creation.
@@ -195,8 +199,23 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         // Inner parchment dims on cooldown
         _innerImage.color = _isReady ? InnerReady : InnerCooldown;
 
-        // Scale pop on hover
-        transform.localScale = (_hovered && _isReady) ? HoverScale : NormalScale;
+        // Scale + lift on hover
+        bool pop = _hovered && _isReady;
+        transform.localScale = pop ? HoverScale : NormalScale;
+
+        var pos = transform.localPosition;
+        pos.y = _baseLocalY + (pop ? HoverLift : 0f);
+        transform.localPosition = pos;
+    }
+
+    private void LateUpdate()
+    {
+        // Capture base Y once layout has positioned us (first frame)
+        if (!_captured)
+        {
+            _baseLocalY = transform.localPosition.y;
+            _captured = true;
+        }
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
