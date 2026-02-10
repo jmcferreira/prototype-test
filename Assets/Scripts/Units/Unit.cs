@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -100,6 +101,7 @@ public abstract class Unit : MonoBehaviour
     {
         HP = Mathf.Max(0, HP - damage);
         Debug.Log($"{DisplayName} took {damage} damage — HP: {HP}");
+        SpawnDamageNumber(damage);
         if (HP <= 0)
             HideVisuals();
         NotifyChanged();
@@ -113,6 +115,52 @@ public abstract class Unit : MonoBehaviour
         Debug.Log($"{DisplayName} has been defeated!");
         foreach (var r in GetComponentsInChildren<Renderer>())
             r.enabled = false;
+    }
+
+    /// <summary>
+    /// Spawn a floating "-X" damage number above the unit that drifts up and fades out.
+    /// </summary>
+    private void SpawnDamageNumber(int damage)
+    {
+        var go = new GameObject("DmgNum");
+        go.transform.position = transform.position + new Vector3(0f, 0.15f, 0.3f);
+        go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        var tm = go.AddComponent<TextMesh>();
+        tm.text = $"-{damage}";
+        tm.fontSize = 64;
+        tm.characterSize = 0.14f;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.color = new Color(1f, 0.2f, 0.15f);
+        tm.fontStyle = FontStyle.Bold;
+
+        StartCoroutine(AnimateDamageNumber(go, tm));
+    }
+
+    private static IEnumerator AnimateDamageNumber(GameObject go, TextMesh tm)
+    {
+        float duration = 0.9f;
+        float elapsed = 0f;
+        Vector3 startPos = go.transform.position;
+        Color startColor = tm.color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+
+            // Drift upward (in world Z = screen up for top-down camera)
+            go.transform.position = startPos + new Vector3(0f, 0f, t * 0.8f);
+
+            // Fade out in the second half
+            float alpha = t < 0.5f ? 1f : 1f - (t - 0.5f) * 2f;
+            tm.color = new Color(startColor.r, startColor.g, startColor.b, alpha);
+
+            yield return null;
+        }
+
+        UnityEngine.Object.Destroy(go);
     }
 
     /// <summary>
