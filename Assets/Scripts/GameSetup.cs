@@ -117,6 +117,12 @@ public class GameSetup : MonoBehaviour
         var banner = bannerGo.AddComponent<TurnBannerUI>();
         banner.Init(turnManager);
 
+        // Game-over modal (hidden until victory/defeat)
+        var modalGo = new GameObject("GameOverModal");
+        modalGo.transform.SetParent(uiGo.transform, false);
+        var modal = modalGo.AddComponent<GameOverModalUI>();
+        modal.Init(turnManager);
+
         // --- Start the game ---
         var turnOrder = new List<Unit> { player, spider1, spider2, orc };
         turnManager.Begin(turnOrder);

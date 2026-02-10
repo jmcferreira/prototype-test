@@ -16,9 +16,11 @@ public class UnitInfoPanel : MonoBehaviour
     private Text _nameText;
     private Text _hpText;
     private readonly Dictionary<StatusEffectType, Text> _statusTexts = new();
+    private GameObject _deceasedOverlay;
 
     private Color _borderActiveColor;
     private Color _borderInactiveColor;
+    private static readonly Color DeceasedBorderColor = new Color(0.25f, 0.25f, 0.25f, 0.85f);
 
     public void Init(Unit unit, TurnManager turnManager, bool isLeft, int stackIndex = 0)
     {
@@ -104,6 +106,9 @@ public class UnitInfoPanel : MonoBehaviour
 
         // Status icons row
         BuildStatusRow(innerGo.transform);
+
+        // Deceased overlay (hidden until unit dies)
+        BuildDeceasedOverlay();
     }
 
     private void BuildAvatar(Transform parent, Color teamColor, int size)
@@ -171,6 +176,41 @@ public class UnitInfoPanel : MonoBehaviour
         }
     }
 
+    private void BuildDeceasedOverlay()
+    {
+        _deceasedOverlay = new GameObject("DeceasedOverlay");
+        _deceasedOverlay.transform.SetParent(transform, false);
+
+        // Semi-transparent dark overlay covering the whole panel
+        var overlayImg = _deceasedOverlay.AddComponent<Image>();
+        overlayImg.color = new Color(0.05f, 0.05f, 0.05f, 0.7f);
+        overlayImg.raycastTarget = false;
+        var overlayRect = _deceasedOverlay.GetComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+
+        // "Deceased" text centered on the overlay
+        var txtGo = new GameObject("DeceasedText");
+        txtGo.transform.SetParent(_deceasedOverlay.transform, false);
+        var txt = txtGo.AddComponent<Text>();
+        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.fontSize = 20;
+        txt.fontStyle = FontStyle.Bold;
+        txt.alignment = TextAnchor.MiddleCenter;
+        txt.color = new Color(0.7f, 0.2f, 0.2f);
+        txt.text = "Deceased";
+        txt.raycastTarget = false;
+        var txtRect = txtGo.GetComponent<RectTransform>();
+        txtRect.anchorMin = Vector2.zero;
+        txtRect.anchorMax = Vector2.one;
+        txtRect.offsetMin = Vector2.zero;
+        txtRect.offsetMax = Vector2.zero;
+
+        _deceasedOverlay.SetActive(false);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────
 
     private static Text CreateText(Transform parent, string name, int fontSize,
@@ -225,6 +265,18 @@ public class UnitInfoPanel : MonoBehaviour
 
         _nameText.text = _unit.DisplayName;
 
+        if (!_unit.IsAlive)
+        {
+            _hpText.text = "";
+            if (_deceasedOverlay != null)
+                _deceasedOverlay.SetActive(true);
+
+            // Hide all status icons
+            foreach (var kvp in _statusTexts)
+                kvp.Value.gameObject.SetActive(false);
+            return;
+        }
+
         string hearts = new string('\u2665', Mathf.Max(0, _unit.HP));
         _hpText.text = hearts;
 
@@ -243,6 +295,11 @@ public class UnitInfoPanel : MonoBehaviour
     private void Update()
     {
         if (_turnManager == null || _unit == null) return;
+        if (!_unit.IsAlive)
+        {
+            _borderImage.color = DeceasedBorderColor;
+            return;
+        }
         bool active = _turnManager.CurrentUnit == _unit;
         _borderImage.color = active ? _borderActiveColor : _borderInactiveColor;
     }

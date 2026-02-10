@@ -18,6 +18,9 @@ public class TurnManager : MonoBehaviour
     /// <summary>Fired when the active unit changes (at game start and after each turn ends).</summary>
     public event Action<Unit> OnTurnChanged;
 
+    /// <summary>Fired when the game ends. True = player victory, false = defeat.</summary>
+    public event Action<bool> OnGameOver;
+
     /// <summary>All units registered in the turn order (alive or dead).</summary>
     public IReadOnlyList<Unit> AllUnits => _turnOrder;
 
@@ -61,8 +64,10 @@ public class TurnManager : MonoBehaviour
         }
         if (!anyPlayerAlive || !anyEnemyAlive)
         {
-            string result = anyPlayerAlive ? "Victory! All enemies defeated." : "Defeat! Player has fallen.";
+            bool playerWon = anyPlayerAlive;
+            string result = playerWon ? "Victory! All enemies defeated." : "Defeat! Player has fallen.";
             Debug.Log(result);
+            OnGameOver?.Invoke(playerWon);
             return;
         }
 

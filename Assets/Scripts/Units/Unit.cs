@@ -94,13 +94,25 @@ public abstract class Unit : MonoBehaviour
     }
 
     /// <summary>
-    /// Take damage. Logs HP remaining.
+    /// Take damage. Logs HP remaining. Hides visuals when defeated.
     /// </summary>
     public void TakeHit(int damage)
     {
-        HP -= damage;
+        HP = Mathf.Max(0, HP - damage);
         Debug.Log($"{DisplayName} took {damage} damage — HP: {HP}");
+        if (HP <= 0)
+            HideVisuals();
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Disable all child renderers so the poker chip disappears from the map.
+    /// </summary>
+    private void HideVisuals()
+    {
+        Debug.Log($"{DisplayName} has been defeated!");
+        foreach (var r in GetComponentsInChildren<Renderer>())
+            r.enabled = false;
     }
 
     /// <summary>
