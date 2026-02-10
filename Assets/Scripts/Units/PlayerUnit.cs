@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Player-controlled unit with an explicit two-state interaction model:
-///   Idle         → click a card in the HandUI to select it, or click Pass
-///   CardSelected → valid targets highlighted, click one to resolve and end turn
+/// Player-controlled unit. States:
+///   Idle         → click a card in the HandUI, or click Pass
+///   CardSelected → step through each action: pick target or skip, then advance
 /// </summary>
 public class PlayerUnit : Unit
 {
@@ -15,6 +15,7 @@ public class PlayerUnit : Unit
     private State _state = State.Inactive;
     private CardInstance _selectedCard;
     private int _selectedCardIndex = -1;
+    private int _currentActionIndex;
     private List<HexCoord> _validTargets;
     private HashSet<HexCoord> _validTargetSet;
     private HexTile _hoveredTargetTile;
@@ -48,6 +49,7 @@ public class PlayerUnit : Unit
         _handUI = handUI;
         _handUI.OnCardClicked += HandleCardClicked;
         _handUI.OnPassClicked += HandlePassClicked;
+        _handUI.OnSkipClicked += HandleSkipClicked;
     }
 
     public override void OnTurnStart()
@@ -66,6 +68,7 @@ public class PlayerUnit : Unit
         _selectedCardIndex = -1;
         _validTargetSet = null;
         _handUI?.SetSelectedCard(-1);
+        _handUI?.HideActionStep();
         _state = State.Inactive;
     }
 
@@ -81,18 +84,13 @@ public class PlayerUnit : Unit
     {
         _state = State.Idle;
         _handUI?.SetSelectedCard(-1);
+        _handUI?.HideActionStep();
     }
 
     private void HandleCardClicked(int index)
     {
-        if (_state != State.Idle && _state != State.CardSelected) return;
-
-        // Clicking the already-selected card deselects it
-        if (_state == State.CardSelected && index == _selectedCardIndex)
-        {
-            DeselectCard();
-            return;
-        }
+        // Only allow card selection/deselection from Idle
+        if (_state != State.Idle) return;
 
         if (Hand == null || index < 0 || index >= Hand.Cards.Count) return;
 
@@ -103,21 +101,13 @@ public class PlayerUnit : Unit
             return;
         }
 
-        var targets = card.GetValidTargets(this, _enemy, Grid);
-        if (targets.Count == 0)
+        if (card.ActionCount == 0)
         {
-            Debug.Log($"[{card.Data.cardName}] has no valid targets.");
+            Debug.Log($"[{card.Data.cardName}] has no actions.");
             return;
         }
 
-        // Clear previous selection if switching cards
-        if (_state == State.CardSelected)
-        {
-            ClearTargetHover();
-            ClearHighlights();
-        }
-
-        EnterCardSelected(card, index, targets);
+        EnterCardSelected(card, index);
     }
 
     private void HandlePassClicked()
@@ -128,38 +118,66 @@ public class PlayerUnit : Unit
         _turnManager.EndCurrentTurn();
     }
 
-    private void DeselectCard()
+    private void HandleSkipClicked()
     {
-        ClearTargetHover();
-        ClearHighlights();
-        _selectedCard = null;
-        _selectedCardIndex = -1;
-        _validTargetSet = null;
-        Debug.Log("Card deselected.");
-        EnterIdle();
+        if (_state != State.CardSelected) return;
+        SkipCurrentAction();
     }
 
-    // --- CardSelected: waiting for target click ---
+    // --- CardSelected: stepping through actions ---
 
-    private void EnterCardSelected(CardInstance card, int index, List<HexCoord> targets)
+    private void EnterCardSelected(CardInstance card, int index)
     {
         _selectedCard = card;
         _selectedCardIndex = index;
+        _currentActionIndex = 0;
+        _handUI?.SetSelectedCard(index);
+        _state = State.CardSelected;
+        Debug.Log($"[{card.Data.cardName}] selected.");
+        ShowCurrentAction();
+    }
+
+    /// <summary>
+    /// Show valid targets for the current action. Auto-skips if none available.
+    /// </summary>
+    private void ShowCurrentAction()
+    {
+        // Past the last action → card is done
+        if (_currentActionIndex >= _selectedCard.ActionCount)
+        {
+            FinishCard();
+            return;
+        }
+
+        var action = _selectedCard.GetAction(_currentActionIndex);
+        var targets = _selectedCard.GetValidTargetsForAction(_currentActionIndex, this, _enemy, Grid);
+
+        if (targets.Count == 0)
+        {
+            // Auto-skip actions with no valid targets
+            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                      $"{Hand.DescribeAction(action)} — no valid targets, skipping.");
+            _currentActionIndex++;
+            ShowCurrentAction();
+            return;
+        }
+
         _validTargets = targets;
         _validTargetSet = new HashSet<HexCoord>(targets);
         _hoveredTargetTile = null;
         HighlightTargets(true);
-        _handUI?.SetSelectedCard(index);
-        _state = State.CardSelected;
-        Debug.Log($"[{card.Data.cardName}] selected — click a highlighted hex.");
+
+        string desc = Hand.DescribeAction(action);
+        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc);
+        Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc} — click a target or skip.");
     }
 
     private void UpdateCardSelected()
     {
-        // Right-click to cancel selection
+        // Right-click to cancel entire card (back to Idle)
         if (Input.GetMouseButtonDown(1))
         {
-            DeselectCard();
+            CancelCard();
             return;
         }
 
@@ -171,30 +189,60 @@ public class PlayerUnit : Unit
         if (tileUnderMouse == null) return;
 
         HexCoord clicked = tileUnderMouse.Coord;
-
         if (!_validTargetSet.Contains(clicked)) return;
 
-        // Resolve and end turn
+        // Resolve this action and advance
         ClearTargetHover();
-        _selectedCard.Resolve(this, _enemy, Grid, clicked);
+        ClearHighlights();
+        _selectedCard.ResolveAction(_currentActionIndex, this, _enemy, Grid, clicked);
+        _currentActionIndex++;
+        ShowCurrentAction();
+    }
+
+    private void SkipCurrentAction()
+    {
+        var action = _selectedCard.GetAction(_currentActionIndex);
+        Debug.Log($"  Skipped {Hand.DescribeAction(action)}.");
+        ClearTargetHover();
+        ClearHighlights();
+        _currentActionIndex++;
+        ShowCurrentAction();
+    }
+
+    private void FinishCard()
+    {
+        _selectedCard.StartCooldown();
+        ClearTargetHover();
         ClearHighlights();
         _hexInteraction?.ClearSelection();
         _selectedCard = null;
         _selectedCardIndex = -1;
         _validTargetSet = null;
         _handUI?.SetSelectedCard(-1);
+        _handUI?.HideActionStep();
         _handUI?.Refresh(Hand);
         _turnManager.EndCurrentTurn();
     }
 
+    private void CancelCard()
+    {
+        ClearTargetHover();
+        ClearHighlights();
+        _selectedCard = null;
+        _selectedCardIndex = -1;
+        _validTargetSet = null;
+        Debug.Log("Card cancelled.");
+        EnterIdle();
+    }
+
+    // --- Hover helpers ---
+
     private void UpdateTargetHover(HexTile tileUnderMouse)
     {
-        // Clear previous hover
         if (_hoveredTargetTile != null && _hoveredTargetTile != tileUnderMouse)
             _hoveredTargetTile.SetTargetHovered(false);
 
-        // Apply hover if over a valid target
-        if (tileUnderMouse != null && _validTargetSet.Contains(tileUnderMouse.Coord))
+        if (tileUnderMouse != null && _validTargetSet != null && _validTargetSet.Contains(tileUnderMouse.Coord))
         {
             tileUnderMouse.SetTargetHovered(true);
             _hoveredTargetTile = tileUnderMouse;
@@ -214,7 +262,7 @@ public class PlayerUnit : Unit
         }
     }
 
-    // --- Helpers ---
+    // --- Highlight helpers ---
 
     private void HighlightTargets(bool highlight)
     {

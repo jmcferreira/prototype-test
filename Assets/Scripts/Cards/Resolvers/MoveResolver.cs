@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class MoveResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardData data, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
     {
         var reachable = new HashSet<HexCoord>();
         var frontier = new Queue<(HexCoord coord, int steps)>();
@@ -17,7 +17,7 @@ public class MoveResolver : ICardResolver
         while (frontier.Count > 0)
         {
             var (current, steps) = frontier.Dequeue();
-            if (steps >= data.range) continue;
+            if (steps >= action.range) continue;
 
             for (int dir = 0; dir < 6; dir++)
             {
@@ -36,7 +36,7 @@ public class MoveResolver : ICardResolver
         return new List<HexCoord>(reachable);
     }
 
-    public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
         Debug.Log($"Move: {caster.Team} moved to {target}.");
         caster.ForceMoveTo(target);

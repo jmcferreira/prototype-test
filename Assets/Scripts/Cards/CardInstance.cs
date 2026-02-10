@@ -3,39 +3,55 @@ using UnityEngine;
 
 /// <summary>
 /// Runtime state for one card in a player's hand.
-/// Wraps a CardData asset, tracks cooldown, and delegates to its resolver.
+/// Wraps a CardData asset and tracks cooldown.
+/// Provides per-action access for multi-action resolution.
 /// </summary>
 public class CardInstance
 {
     public CardData Data { get; }
-    public ICardResolver Resolver { get; }
     public int CooldownRemaining { get; private set; }
 
     public bool IsReady => CooldownRemaining <= 0;
+    public int ActionCount => Data.actions != null ? Data.actions.Length : 0;
 
     public CardInstance(CardData data)
     {
         Data = data;
-        Resolver = CardResolverFactory.Get(data.effect);
         CooldownRemaining = 0;
     }
 
-    /// <summary>
-    /// Returns valid target hexes for this card given current game state.
-    /// </summary>
-    public List<HexCoord> GetValidTargets(Unit caster, Unit enemy, HexGrid grid)
+    public CardAction GetAction(int index)
     {
-        return Resolver.GetValidTargets(Data, caster, enemy, grid);
+        return Data.actions[index];
     }
 
     /// <summary>
-    /// Resolve the card effect on the chosen target. Starts cooldown.
+    /// Returns valid target hexes for a specific action.
     /// </summary>
-    public void Resolve(Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public List<HexCoord> GetValidTargetsForAction(int actionIndex, Unit caster, Unit enemy, HexGrid grid)
     {
-        Resolver.Resolve(Data, caster, enemy, grid, target);
+        var action = Data.actions[actionIndex];
+        var resolver = CardResolverFactory.Get(action.effect);
+        return resolver.GetValidTargets(action, caster, enemy, grid);
+    }
+
+    /// <summary>
+    /// Resolve a specific action on the chosen target.
+    /// </summary>
+    public void ResolveAction(int actionIndex, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    {
+        var action = Data.actions[actionIndex];
+        var resolver = CardResolverFactory.Get(action.effect);
+        resolver.Resolve(action, caster, enemy, grid, target);
+    }
+
+    /// <summary>
+    /// Apply cooldown. Called once after all actions are done (resolved or skipped).
+    /// </summary>
+    public void StartCooldown()
+    {
         CooldownRemaining = Data.cooldown;
-        Debug.Log($"[{Data.cardName}] resolved! Cooldown set to {Data.cooldown}.");
+        Debug.Log($"[{Data.cardName}] done. Cooldown set to {Data.cooldown}.");
     }
 
     /// <summary>

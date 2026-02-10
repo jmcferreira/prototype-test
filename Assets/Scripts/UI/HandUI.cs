@@ -7,16 +7,18 @@ using UnityEngine.UI;
 /// <summary>
 /// Displays the player's hand as a horizontal row of card buttons.
 /// Pure display layer — contains no gameplay logic.
-/// Fires OnCardClicked(index) when a card button is pressed.
-/// Fires OnPassClicked when the pass button is pressed.
+/// Shows an action step label + Skip button during multi-action resolution.
 /// </summary>
 public class HandUI : MonoBehaviour
 {
     public event Action<int> OnCardClicked;
     public event Action OnPassClicked;
+    public event Action OnSkipClicked;
 
     private readonly List<CardUI> _cardUIs = new();
     private Canvas _canvas;
+    private GameObject _actionStepGo;
+    private Text _actionStepText;
 
     /// <summary>
     /// Build the UI from the given hand. Call once after the hand is created.
@@ -50,7 +52,10 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 90f);
+        bgRect.sizeDelta = new Vector2(0f, 110f);
+
+        // Action step label + Skip button (above cards, hidden by default)
+        BuildActionStepUI();
 
         // Card row — centered on the background strip
         var panelGo = new GameObject("CardPanel");
@@ -125,6 +130,70 @@ public class HandUI : MonoBehaviour
         Refresh(hand);
     }
 
+    private void BuildActionStepUI()
+    {
+        _actionStepGo = new GameObject("ActionStep");
+        _actionStepGo.transform.SetParent(transform, false);
+
+        var stepRect = _actionStepGo.AddComponent<RectTransform>();
+        stepRect.anchorMin = new Vector2(0.5f, 0f);
+        stepRect.anchorMax = new Vector2(0.5f, 0f);
+        stepRect.pivot = new Vector2(0.5f, 0f);
+        stepRect.anchoredPosition = new Vector2(0f, 85f);
+
+        var stepLayout = _actionStepGo.AddComponent<HorizontalLayoutGroup>();
+        stepLayout.spacing = 10;
+        stepLayout.childAlignment = TextAnchor.MiddleCenter;
+        stepLayout.childForceExpandWidth = false;
+        stepLayout.childForceExpandHeight = false;
+
+        var stepFitter = _actionStepGo.AddComponent<ContentSizeFitter>();
+        stepFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        stepFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // Action label
+        var labelGo = new GameObject("Label");
+        labelGo.transform.SetParent(_actionStepGo.transform, false);
+        _actionStepText = labelGo.AddComponent<Text>();
+        _actionStepText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _actionStepText.fontSize = 14;
+        _actionStepText.alignment = TextAnchor.MiddleCenter;
+        _actionStepText.color = Color.white;
+        var labelLe = labelGo.AddComponent<LayoutElement>();
+        labelLe.preferredHeight = 24;
+
+        // Skip button
+        var skipGo = new GameObject("SkipButton");
+        skipGo.transform.SetParent(_actionStepGo.transform, false);
+
+        var skipLe = skipGo.AddComponent<LayoutElement>();
+        skipLe.preferredWidth = 50;
+        skipLe.preferredHeight = 24;
+
+        var skipBg = skipGo.AddComponent<Image>();
+        skipBg.color = new Color(0.7f, 0.55f, 0.55f);
+
+        var skipBtn = skipGo.AddComponent<Button>();
+        skipBtn.targetGraphic = skipBg;
+        skipBtn.onClick.AddListener(() => OnSkipClicked?.Invoke());
+
+        var skipTextGo = new GameObject("Text");
+        skipTextGo.transform.SetParent(skipGo.transform, false);
+        var skipText = skipTextGo.AddComponent<Text>();
+        skipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        skipText.fontSize = 12;
+        skipText.alignment = TextAnchor.MiddleCenter;
+        skipText.color = Color.white;
+        skipText.text = "Skip";
+        var skipTR = skipTextGo.GetComponent<RectTransform>();
+        skipTR.anchorMin = Vector2.zero;
+        skipTR.anchorMax = Vector2.one;
+        skipTR.offsetMin = Vector2.zero;
+        skipTR.offsetMax = Vector2.zero;
+
+        _actionStepGo.SetActive(false);
+    }
+
     /// <summary>
     /// Update all card displays from current hand state.
     /// </summary>
@@ -135,23 +204,11 @@ public class HandUI : MonoBehaviour
             var card = hand.Cards[i];
             _cardUIs[i].Refresh(
                 card.Data.cardName,
-                DescribeCard(card.Data),
+                Hand.DescribeActions(card.Data),
                 card.CooldownRemaining,
                 card.Data.cooldown,
                 card.IsReady
             );
-        }
-    }
-
-    private static string DescribeCard(CardData data)
-    {
-        switch (data.effect)
-        {
-            case CardEffect.Move:   return $"Move {data.range}";
-            case CardEffect.Attack: return $"Attack {data.damage}, Rng {data.range}";
-            case CardEffect.Push:   return $"Push {data.pushDistance}, Rng {data.range}";
-            case CardEffect.Pull:   return $"Pull {data.pushDistance}, Rng {data.range}";
-            default:                return data.effect.ToString();
         }
     }
 
@@ -162,5 +219,23 @@ public class HandUI : MonoBehaviour
     {
         for (int i = 0; i < _cardUIs.Count; i++)
             _cardUIs[i].SetSelected(i == index);
+    }
+
+    /// <summary>
+    /// Show the current action step indicator above the cards.
+    /// </summary>
+    public void ShowActionStep(int step, int total, string description)
+    {
+        _actionStepText.text = $"Step {step}/{total}: {description}";
+        _actionStepGo.SetActive(true);
+    }
+
+    /// <summary>
+    /// Hide the action step indicator.
+    /// </summary>
+    public void HideActionStep()
+    {
+        if (_actionStepGo != null)
+            _actionStepGo.SetActive(false);
     }
 }

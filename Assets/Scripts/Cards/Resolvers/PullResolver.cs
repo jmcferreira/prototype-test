@@ -2,22 +2,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Pull: yank the enemy N hexes toward the caster (data.pushDistance).
-/// Valid target is the enemy's hex if within data.range, not already adjacent,
+/// Pull: yank the enemy N hexes toward the caster (action.pushDistance).
+/// Valid target is the enemy's hex if within action.range, not already adjacent,
 /// and at least 1 hex of pull space exists. Stops early at occupied tiles.
 /// </summary>
 public class PullResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardData data, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
     {
         var targets = new List<HexCoord>();
 
         int dist = caster.Coord.DistanceTo(enemy.Coord);
-        if (dist > data.range || dist <= 1)
+        if (dist > action.range || dist <= 1)
             return targets;
 
         int pullDir = GetDirectionToward(enemy.Coord, caster.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pullDir, data.pushDistance, enemy, grid);
+        HexCoord dest = WalkDirection(enemy.Coord, pullDir, action.pushDistance, enemy, grid);
 
         if (dest != enemy.Coord)
             targets.Add(enemy.Coord);
@@ -25,10 +25,10 @@ public class PullResolver : ICardResolver
         return targets;
     }
 
-    public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
         int pullDir = GetDirectionToward(enemy.Coord, caster.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pullDir, data.pushDistance, enemy, grid);
+        HexCoord dest = WalkDirection(enemy.Coord, pullDir, action.pushDistance, enemy, grid);
 
         Debug.Log($"Pull: {enemy.Team} pulled {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);

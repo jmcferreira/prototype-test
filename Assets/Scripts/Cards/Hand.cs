@@ -34,10 +34,29 @@ public class Hand
         {
             var c = _cards[i];
             string status = c.IsReady ? "READY" : $"cd:{c.CooldownRemaining}";
-            string dmg = c.Data.damage > 0 ? $", dmg:{c.Data.damage}" : "";
-            string push = c.Data.pushDistance > 0 && (c.Data.effect == CardEffect.Push || c.Data.effect == CardEffect.Pull)
-                ? $", dist:{c.Data.pushDistance}" : "";
-            Debug.Log($"  [{i + 1}] {c.Data.cardName} ({c.Data.effect}, range:{c.Data.range}{dmg}{push}) — {status}");
+            string actions = DescribeActions(c.Data);
+            Debug.Log($"  [{i + 1}] {c.Data.cardName} ({actions}) — {status}");
+        }
+    }
+
+    public static string DescribeActions(CardData data)
+    {
+        if (data.actions == null || data.actions.Length == 0) return "no actions";
+        var parts = new List<string>();
+        foreach (var a in data.actions)
+            parts.Add(DescribeAction(a));
+        return string.Join(" > ", parts);
+    }
+
+    public static string DescribeAction(CardAction action)
+    {
+        switch (action.effect)
+        {
+            case CardEffect.Move:   return $"Move {action.range}";
+            case CardEffect.Attack: return $"Atk {action.damage} Rng {action.range}";
+            case CardEffect.Push:   return $"Push {action.pushDistance} Rng {action.range}";
+            case CardEffect.Pull:   return $"Pull {action.pushDistance} Rng {action.range}";
+            default:                return action.effect.ToString();
         }
     }
 }

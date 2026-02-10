@@ -70,51 +70,52 @@ public class GameSetup : MonoBehaviour
 
     private static CardData[] CreateDefaultPlayerCards()
     {
-        var move = ScriptableObject.CreateInstance<CardData>();
-        move.cardName = "Dash";
-        move.effect = CardEffect.Move;
-        move.range = 2;
-        move.cooldown = 1;
+        // Dash: Move 2
+        var dash = ScriptableObject.CreateInstance<CardData>();
+        dash.cardName = "Dash";
+        dash.actions = new[] { new CardAction { effect = CardEffect.Move, range = 2 } };
+        dash.cooldown = 1;
 
-        var attack = ScriptableObject.CreateInstance<CardData>();
-        attack.cardName = "Strike";
-        attack.effect = CardEffect.Attack;
-        attack.range = 1;
-        attack.damage = 1;
-        attack.cooldown = 2;
+        // Dash Strike: Move 2 → Attack 1 → Push 1
+        var dashStrike = ScriptableObject.CreateInstance<CardData>();
+        dashStrike.cardName = "Dash Strike";
+        dashStrike.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Move, range = 2 },
+            new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 },
+            new CardAction { effect = CardEffect.Push, range = 1, pushDistance = 1 },
+        };
+        dashStrike.cooldown = 3;
 
-        var push = ScriptableObject.CreateInstance<CardData>();
-        push.cardName = "Shove";
-        push.effect = CardEffect.Push;
-        push.range = 1;
-        push.pushDistance = 1;
-        push.cooldown = 3;
+        // Strike: Attack 1
+        var strike = ScriptableObject.CreateInstance<CardData>();
+        strike.cardName = "Strike";
+        strike.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 } };
+        strike.cooldown = 2;
 
-        var pull = ScriptableObject.CreateInstance<CardData>();
-        pull.cardName = "Hook";
-        pull.effect = CardEffect.Pull;
-        pull.range = 3;
-        pull.pushDistance = 2;
-        pull.cooldown = 3;
+        // Hook: Pull 2 (range 3)
+        var hook = ScriptableObject.CreateInstance<CardData>();
+        hook.cardName = "Hook";
+        hook.actions = new[] { new CardAction { effect = CardEffect.Pull, range = 3, pushDistance = 2 } };
+        hook.cooldown = 3;
 
-        return new[] { move, attack, push, pull };
+        return new[] { dash, dashStrike, strike, hook };
     }
 
     private static CardData[] CreateDefaultEnemyCards()
     {
-        var attack = ScriptableObject.CreateInstance<CardData>();
-        attack.cardName = "Claw";
-        attack.effect = CardEffect.Attack;
-        attack.range = 1;
-        attack.damage = 1;
-        attack.cooldown = 1;
+        // Claw: Attack 1
+        var claw = ScriptableObject.CreateInstance<CardData>();
+        claw.cardName = "Claw";
+        claw.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 } };
+        claw.cooldown = 1;
 
-        var move = ScriptableObject.CreateInstance<CardData>();
-        move.cardName = "Advance";
-        move.effect = CardEffect.Move;
-        move.range = 1;
-        move.cooldown = 1;
+        // Advance: Move 1
+        var advance = ScriptableObject.CreateInstance<CardData>();
+        advance.cardName = "Advance";
+        advance.actions = new[] { new CardAction { effect = CardEffect.Move, range = 1 } };
+        advance.cooldown = 1;
 
-        return new[] { attack, move };
+        return new[] { claw, advance };
     }
 }

@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Enemy unit. On its turn, scans its cards for one with valid targets
-/// and resolves it against the player. One action per turn.
+/// Enemy unit. On its turn, picks the first ready card and executes
+/// all of its actions automatically (resolve if valid target, skip otherwise).
 /// </summary>
 public class EnemyUnit : Unit
 {
@@ -30,28 +30,52 @@ public class EnemyUnit : Unit
 
     public override void OnTurnStart()
     {
-        // Try each card in priority order until one has valid targets
+        // Tick cooldowns
+        foreach (var card in _cards)
+            card.TickCooldown();
+
+        // Try each card in priority order
         foreach (var card in _cards)
         {
-            var targets = card.GetValidTargets(this, _player, Grid);
-            if (targets.Count == 0) continue;
+            if (!card.IsReady || card.ActionCount == 0) continue;
 
-            // Pick the target closest to the player (for move: walk toward them)
-            HexCoord best = targets[0];
-            int bestDist = best.DistanceTo(_player.Coord);
-            for (int i = 1; i < targets.Count; i++)
+            // Check if at least one action has valid targets
+            bool anyActionValid = false;
+            for (int i = 0; i < card.ActionCount; i++)
             {
-                int dist = targets[i].DistanceTo(_player.Coord);
-                if (dist < bestDist)
+                var targets = card.GetValidTargetsForAction(i, this, _player, Grid);
+                if (targets.Count > 0) { anyActionValid = true; break; }
+            }
+            if (!anyActionValid) continue;
+
+            Debug.Log($"Enemy plays [{card.Data.cardName}].");
+
+            // Execute all actions in order
+            for (int i = 0; i < card.ActionCount; i++)
+            {
+                var action = card.GetAction(i);
+                var targets = card.GetValidTargetsForAction(i, this, _player, Grid);
+
+                if (targets.Count == 0)
                 {
-                    bestDist = dist;
-                    best = targets[i];
+                    Debug.Log($"  Enemy skips {Hand.DescribeAction(action)} (no targets).");
+                    continue;
                 }
+
+                // Pick the target closest to the player
+                HexCoord best = targets[0];
+                int bestDist = best.DistanceTo(_player.Coord);
+                for (int t = 1; t < targets.Count; t++)
+                {
+                    int dist = targets[t].DistanceTo(_player.Coord);
+                    if (dist < bestDist) { bestDist = dist; best = targets[t]; }
+                }
+
+                Debug.Log($"  Enemy resolves {Hand.DescribeAction(action)} at {best}.");
+                card.ResolveAction(i, this, _player, Grid, best);
             }
 
-            Debug.Log($"Enemy plays [{card.Data.cardName}] targeting {best}.");
-            card.Resolve(this, _player, Grid, best);
-
+            card.StartCooldown();
             Invoke(nameof(EndTurn), 0.05f);
             return;
         }

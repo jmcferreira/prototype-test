@@ -2,21 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Push: shove the enemy N hexes away from the caster (data.pushDistance).
-/// Valid target is the enemy's hex if within data.range and at least 1 hex
+/// Push: shove the enemy N hexes away from the caster (action.pushDistance).
+/// Valid target is the enemy's hex if within action.range and at least 1 hex
 /// of push space exists. Stops early at grid edge or occupied tiles.
 /// </summary>
 public class PushResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardData data, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
     {
         var targets = new List<HexCoord>();
 
-        if (caster.Coord.DistanceTo(enemy.Coord) > data.range)
+        if (caster.Coord.DistanceTo(enemy.Coord) > action.range)
             return targets;
 
         int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pushDir, data.pushDistance, enemy, grid);
+        HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, grid);
 
         // Only valid if the enemy actually moves at least 1 hex
         if (dest != enemy.Coord)
@@ -25,10 +25,10 @@ public class PushResolver : ICardResolver
         return targets;
     }
 
-    public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
         int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pushDir, data.pushDistance, enemy, grid);
+        HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, grid);
 
         Debug.Log($"Push: {enemy.Team} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);

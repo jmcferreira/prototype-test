@@ -7,17 +7,17 @@ using UnityEngine;
 /// </summary>
 public class AttackResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardData data, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
     {
         var targets = new List<HexCoord>();
-        if (caster.Coord.DistanceTo(enemy.Coord) <= data.range)
+        if (caster.Coord.DistanceTo(enemy.Coord) <= action.range)
             targets.Add(enemy.Coord);
         return targets;
     }
 
-    public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        enemy.TakeHit(data.damage);
-        Debug.Log($"Attack: {caster.Team} hit {enemy.Team} for {data.damage} damage.");
+        enemy.TakeHit(action.damage);
+        Debug.Log($"Attack: {caster.Team} hit {enemy.Team} for {action.damage} damage.");
     }
 }

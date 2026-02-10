@@ -1,5 +1,5 @@
 /// <summary>
-/// What a card does when played. Each card has exactly one effect.
+/// The type of effect for one action step within a card.
 /// </summary>
 public enum CardEffect
 {
