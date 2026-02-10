@@ -4,11 +4,15 @@ using UnityEngine;
 /// <summary>
 /// Move: the caster can move to any hex reachable within range steps.
 /// Uses flood fill to find all walkable hexes (no occupied, no off-grid).
+/// Swift status adds bonus range.
 /// </summary>
 public class MoveResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid)
     {
+        int bonusRange = caster.GetStatusStacks(StatusEffectType.Swift);
+        int totalRange = action.range + bonusRange;
+
         var reachable = new HashSet<HexCoord>();
         var frontier = new Queue<(HexCoord coord, int steps)>();
         frontier.Enqueue((caster.Coord, 0));
@@ -17,14 +21,14 @@ public class MoveResolver : ICardResolver
         while (frontier.Count > 0)
         {
             var (current, steps) = frontier.Dequeue();
-            if (steps >= action.range) continue;
+            if (steps >= totalRange) continue;
 
             for (int dir = 0; dir < 6; dir++)
             {
                 HexCoord next = current.Neighbor(dir);
                 if (reachable.Contains(next)) continue;
                 if (!grid.TryGetTile(next, out _)) continue;
-                if (IsOccupied(next)) continue;
+                if (IsOccupied(next, allUnits)) continue;
 
                 reachable.Add(next);
                 frontier.Enqueue((next, steps + 1));
@@ -36,17 +40,17 @@ public class MoveResolver : ICardResolver
         return new List<HexCoord>(reachable);
     }
 
-    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
-        Debug.Log($"Move: {caster.Team} moved to {target}.");
+        Debug.Log($"Move: {caster.DisplayName} moved to {target}.");
         caster.ForceMoveTo(target);
     }
 
-    private static bool IsOccupied(HexCoord coord)
+    private static bool IsOccupied(HexCoord coord, List<Unit> allUnits)
     {
-        foreach (var unit in Object.FindObjectsOfType<Unit>())
+        foreach (var unit in allUnits)
         {
-            if (unit.Coord == coord) return true;
+            if (unit.IsAlive && unit.Coord == coord) return true;
         }
         return false;
     }

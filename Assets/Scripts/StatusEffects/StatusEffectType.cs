@@ -7,4 +7,5 @@ public enum StatusEffectType
     Burn,
     Poison,
     Blind,
+    Swift,
 }

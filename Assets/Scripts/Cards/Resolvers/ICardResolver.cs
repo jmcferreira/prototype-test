@@ -9,11 +9,11 @@ public interface ICardResolver
     /// <summary>
     /// Return every hex the player is allowed to pick right now.
     /// </summary>
-    List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid);
+    List<HexCoord> GetValidTargets(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid);
 
     /// <summary>
     /// Execute the effect on the chosen target hex. Only called with
     /// a coord that was in the GetValidTargets list.
     /// </summary>
-    void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target);
+    void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target);
 }

@@ -19,7 +19,6 @@ public class PlayerUnit : Unit
     private List<HexCoord> _validTargets;
     private HashSet<HexCoord> _validTargetSet;
     private HexTile _hoveredTargetTile;
-    private Unit _enemy;
     private HexInteraction _hexInteraction;
     private TurnManager _turnManager;
     private HandUI _handUI;
@@ -27,11 +26,6 @@ public class PlayerUnit : Unit
     public void InitHand(CardData[] cardDatas)
     {
         Hand = new Hand(cardDatas);
-    }
-
-    public void SetEnemy(Unit enemy)
-    {
-        _enemy = enemy;
     }
 
     public void SetHexInteraction(HexInteraction hexInteraction)
@@ -142,6 +136,7 @@ public class PlayerUnit : Unit
 
     /// <summary>
     /// Show valid targets for the current action. Auto-skips if none available.
+    /// Auto-resolves self-targeting status effects.
     /// </summary>
     private void ShowCurrentAction()
     {
@@ -153,13 +148,26 @@ public class PlayerUnit : Unit
         }
 
         var action = _selectedCard.GetAction(_currentActionIndex);
-        var targets = _selectedCard.GetValidTargetsForAction(_currentActionIndex, this, _enemy, Grid);
+        var allUnits = _turnManager.GetAliveUnits();
+        var targets = _selectedCard.GetValidTargetsForAction(_currentActionIndex, this, allUnits, Grid);
 
         if (targets.Count == 0)
         {
             // Auto-skip actions with no valid targets
             Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
                       $"{Hand.DescribeAction(action)} — no valid targets, skipping.");
+            _currentActionIndex++;
+            ShowCurrentAction();
+            return;
+        }
+
+        // Auto-resolve self-targeting status effects (no click needed)
+        if (action.targetSelf && action.effect == CardEffect.Status)
+        {
+            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                      $"{Hand.DescribeAction(action)} — auto-applying to self.");
+            _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, Coord);
+            TriggerStatuses(StatusTrigger.OnAction);
             _currentActionIndex++;
             ShowCurrentAction();
             return;
@@ -199,7 +207,8 @@ public class PlayerUnit : Unit
         // Resolve this action and advance
         ClearTargetHover();
         ClearHighlights();
-        _selectedCard.ResolveAction(_currentActionIndex, this, _enemy, Grid, clicked);
+        var allUnits = _turnManager.GetAliveUnits();
+        _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, clicked);
         TriggerStatuses(StatusTrigger.OnAction); // Burn etc.
         _currentActionIndex++;
         ShowCurrentAction();

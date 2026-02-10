@@ -1,60 +1,75 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Manages strict Player → Enemy turn alternation.
-/// Units call EndCurrentTurn() when they're done acting.
+/// Manages per-unit turn order: Player → Enemy1 → Enemy2 → Enemy3 → ...
+/// Skips dead units. Detects victory/defeat conditions.
 /// </summary>
 public class TurnManager : MonoBehaviour
 {
-    public Team CurrentTeam { get; private set; } = Team.Player;
+    private List<Unit> _turnOrder = new();
+    private int _currentIndex;
+
+    public Unit CurrentUnit => _turnOrder.Count > 0 ? _turnOrder[_currentIndex] : null;
+    public Team CurrentTeam => CurrentUnit != null ? CurrentUnit.Team : Team.Player;
     public int TurnNumber { get; private set; } = 1;
 
-    private Unit _playerUnit;
-    private Unit _enemyUnit;
+    /// <summary>All units registered in the turn order (alive or dead).</summary>
+    public IReadOnlyList<Unit> AllUnits => _turnOrder;
 
-    public void Begin(Unit playerUnit, Unit enemyUnit)
+    /// <summary>
+    /// Returns a fresh list of all alive units.
+    /// </summary>
+    public List<Unit> GetAliveUnits()
     {
-        _playerUnit = playerUnit;
-        _enemyUnit = enemyUnit;
-        TurnNumber = 1;
-        StartTurn(Team.Player);
+        var alive = new List<Unit>();
+        foreach (var u in _turnOrder)
+            if (u.IsAlive) alive.Add(u);
+        return alive;
     }
 
-    private void StartTurn(Team team)
+    public void Begin(List<Unit> turnOrder)
     {
-        CurrentTeam = team;
-
-        Unit active = team == Team.Player ? _playerUnit : _enemyUnit;
-        active.OnTurnStart();
-
-        if (team == Team.Player)
-        {
-            Debug.Log($"=== Turn {TurnNumber} — PLAYER turn ===");
-        }
-        else
-        {
-            Debug.Log($"=== Turn {TurnNumber} — ENEMY turn ===");
-        }
+        _turnOrder = new List<Unit>(turnOrder);
+        _currentIndex = 0;
+        TurnNumber = 1;
+        Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        CurrentUnit.OnTurnStart();
     }
 
     /// <summary>
-    /// Called by the active unit (or auto-invoked for enemy) to end the current turn.
+    /// Called by the active unit when it finishes acting.
     /// </summary>
     public void EndCurrentTurn()
     {
-        Unit active = CurrentTeam == Team.Player ? _playerUnit : _enemyUnit;
-        active.OnTurnEnd();
+        if (_turnOrder.Count == 0) return;
 
-        if (CurrentTeam == Team.Player)
+        CurrentUnit.OnTurnEnd();
+
+        // Check for game over
+        bool anyPlayerAlive = false;
+        bool anyEnemyAlive = false;
+        foreach (var u in _turnOrder)
         {
-            Debug.Log("Player ended their turn.");
-            StartTurn(Team.Enemy);
+            if (u.IsAlive && u.Team == Team.Player) anyPlayerAlive = true;
+            if (u.IsAlive && u.Team == Team.Enemy) anyEnemyAlive = true;
         }
-        else
+        if (!anyPlayerAlive || !anyEnemyAlive)
         {
-            Debug.Log("Enemy ended their turn.");
-            TurnNumber++;
-            StartTurn(Team.Player);
+            string result = anyPlayerAlive ? "Victory! All enemies defeated." : "Defeat! Player has fallen.";
+            Debug.Log(result);
+            return;
         }
+
+        // Advance to next alive unit
+        int startIndex = _currentIndex;
+        do
+        {
+            _currentIndex = (_currentIndex + 1) % _turnOrder.Count;
+            if (_currentIndex == 0) TurnNumber++;
+        } while (!_turnOrder[_currentIndex].IsAlive && _currentIndex != startIndex);
+
+        Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        CurrentUnit.OnTurnStart();
     }
 }

@@ -7,13 +7,15 @@ public static class CardResolverFactory
 {
     private static readonly Dictionary<CardEffect, ICardResolver> _resolvers = new()
     {
-        { CardEffect.Move,   new MoveResolver() },
-        { CardEffect.Dash,   new DashResolver() },
-        { CardEffect.Attack, new AttackResolver() },
-        { CardEffect.Push,   new PushResolver() },
-        { CardEffect.Pull,   new PullResolver() },
-        { CardEffect.Heal,   new HealResolver() },
-        { CardEffect.Status, new StatusResolver() },
+        { CardEffect.Move,      new MoveResolver() },
+        { CardEffect.Dash,      new DashResolver() },
+        { CardEffect.Attack,    new AttackResolver() },
+        { CardEffect.Push,      new PushResolver() },
+        { CardEffect.Pull,      new PullResolver() },
+        { CardEffect.Heal,      new HealResolver() },
+        { CardEffect.Status,    new StatusResolver() },
+        { CardEffect.Jump,      new JumpResolver() },
+        { CardEffect.AttackAoE, new AttackAoEResolver() },
     };
 
     public static ICardResolver Get(CardEffect effect)

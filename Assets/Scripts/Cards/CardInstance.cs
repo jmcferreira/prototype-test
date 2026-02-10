@@ -28,21 +28,21 @@ public class CardInstance
     /// <summary>
     /// Returns valid target hexes for a specific action.
     /// </summary>
-    public List<HexCoord> GetValidTargetsForAction(int actionIndex, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargetsForAction(int actionIndex, Unit caster, List<Unit> allUnits, HexGrid grid)
     {
         var action = Data.actions[actionIndex];
         var resolver = CardResolverFactory.Get(action.effect);
-        return resolver.GetValidTargets(action, caster, enemy, grid);
+        return resolver.GetValidTargets(action, caster, allUnits, grid);
     }
 
     /// <summary>
     /// Resolve a specific action on the chosen target.
     /// </summary>
-    public void ResolveAction(int actionIndex, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void ResolveAction(int actionIndex, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
         var action = Data.actions[actionIndex];
         var resolver = CardResolverFactory.Get(action.effect);
-        resolver.Resolve(action, caster, enemy, grid, target);
+        resolver.Resolve(action, caster, allUnits, grid, target);
     }
 
     /// <summary>

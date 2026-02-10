@@ -4,11 +4,11 @@ using UnityEngine;
 /// <summary>
 /// Enemy unit. On its turn, picks the first ready card and executes
 /// all of its actions automatically (resolve if valid target, skip otherwise).
+/// Targets the closest enemy-team unit (the player) by default.
 /// </summary>
 public class EnemyUnit : Unit
 {
     private List<CardInstance> _cards;
-    private Unit _player;
     private TurnManager _turnManager;
 
     public void InitCards(CardData[] cardDatas)
@@ -16,11 +16,6 @@ public class EnemyUnit : Unit
         _cards = new List<CardInstance>();
         foreach (var data in cardDatas)
             _cards.Add(new CardInstance(data));
-    }
-
-    public void SetPlayer(Unit player)
-    {
-        _player = player;
     }
 
     public void SetTurnManager(TurnManager turnManager)
@@ -34,6 +29,25 @@ public class EnemyUnit : Unit
         foreach (var card in _cards)
             card.TickCooldown();
 
+        var allUnits = _turnManager.GetAliveUnits();
+
+        // Find primary target (closest enemy-team unit, i.e. the player)
+        Unit primaryTarget = null;
+        int closestDist = int.MaxValue;
+        foreach (var u in allUnits)
+        {
+            if (u.Team == Team || !u.IsAlive) continue;
+            int d = Coord.DistanceTo(u.Coord);
+            if (d < closestDist) { closestDist = d; primaryTarget = u; }
+        }
+
+        if (primaryTarget == null)
+        {
+            Debug.Log($"{DisplayName} has no targets — passing.");
+            Invoke(nameof(EndTurn), 0.05f);
+            return;
+        }
+
         // Try each card in priority order
         foreach (var card in _cards)
         {
@@ -43,36 +57,38 @@ public class EnemyUnit : Unit
             bool anyActionValid = false;
             for (int i = 0; i < card.ActionCount; i++)
             {
-                var targets = card.GetValidTargetsForAction(i, this, _player, Grid);
+                var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
                 if (targets.Count > 0) { anyActionValid = true; break; }
             }
             if (!anyActionValid) continue;
 
-            Debug.Log($"Enemy plays [{card.Data.cardName}].");
+            Debug.Log($"{DisplayName} plays [{card.Data.cardName}].");
 
             // Execute all actions in order
             for (int i = 0; i < card.ActionCount; i++)
             {
                 var action = card.GetAction(i);
-                var targets = card.GetValidTargetsForAction(i, this, _player, Grid);
+                // Refresh alive list in case positions/HP changed
+                allUnits = _turnManager.GetAliveUnits();
+                var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
 
                 if (targets.Count == 0)
                 {
-                    Debug.Log($"  Enemy skips {Hand.DescribeAction(action)} (no targets).");
+                    Debug.Log($"  {DisplayName} skips {Hand.DescribeAction(action)} (no targets).");
                     continue;
                 }
 
-                // Pick the target closest to the player
+                // Pick the target closest to primary target
                 HexCoord best = targets[0];
-                int bestDist = best.DistanceTo(_player.Coord);
+                int bestDist = best.DistanceTo(primaryTarget.Coord);
                 for (int t = 1; t < targets.Count; t++)
                 {
-                    int dist = targets[t].DistanceTo(_player.Coord);
+                    int dist = targets[t].DistanceTo(primaryTarget.Coord);
                     if (dist < bestDist) { bestDist = dist; best = targets[t]; }
                 }
 
-                Debug.Log($"  Enemy resolves {Hand.DescribeAction(action)} at {best}.");
-                card.ResolveAction(i, this, _player, Grid, best);
+                Debug.Log($"  {DisplayName} resolves {Hand.DescribeAction(action)} at {best}.");
+                card.ResolveAction(i, this, allUnits, Grid, best);
                 TriggerStatuses(StatusTrigger.OnAction); // Burn etc.
             }
 
@@ -81,7 +97,7 @@ public class EnemyUnit : Unit
             return;
         }
 
-        Debug.Log("Enemy has no playable cards — passing.");
+        Debug.Log($"{DisplayName} has no playable cards — passing.");
         Invoke(nameof(EndTurn), 0.05f);
     }
 

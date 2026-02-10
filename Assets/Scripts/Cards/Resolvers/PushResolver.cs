@@ -2,44 +2,55 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Push: shove the enemy N hexes away from the caster (action.pushDistance).
-/// Valid target is the enemy's hex if within action.range and at least 1 hex
+/// Push: shove an enemy N hexes away from the caster (action.pushDistance).
+/// Valid target is any enemy's hex within action.range where at least 1 hex
 /// of push space exists. Stops early at grid edge or occupied tiles.
 /// </summary>
 public class PushResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid)
     {
         var targets = new List<HexCoord>();
 
-        if (caster.Coord.DistanceTo(enemy.Coord) > action.range)
-            return targets;
+        foreach (var unit in allUnits)
+        {
+            if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
+            if (caster.Coord.DistanceTo(unit.Coord) > action.range) continue;
 
-        int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, grid);
+            int pushDir = GetDirectionAwayFrom(caster.Coord, unit.Coord);
+            HexCoord dest = WalkDirection(unit.Coord, pushDir, action.pushDistance, unit, allUnits, grid);
 
-        // Only valid if the enemy actually moves at least 1 hex
-        if (dest != enemy.Coord)
-            targets.Add(enemy.Coord);
+            if (dest != unit.Coord)
+                targets.Add(unit.Coord);
+        }
 
         return targets;
     }
 
-    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
-        int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
-        HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, grid);
+        Unit enemy = FindUnitAt(target, caster, allUnits);
+        if (enemy == null) return;
 
-        Debug.Log($"Push: {enemy.Team} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
+        int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
+        HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, allUnits, grid);
+
+        Debug.Log($"Push: {enemy.DisplayName} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);
     }
 
-    /// <summary>
-    /// Find the hex direction index (0–5) that points from 'from' away toward 'to'.
-    /// </summary>
+    private static Unit FindUnitAt(HexCoord coord, Unit exclude, List<Unit> allUnits)
+    {
+        foreach (var unit in allUnits)
+        {
+            if (unit != exclude && unit.IsAlive && unit.Coord == coord)
+                return unit;
+        }
+        return null;
+    }
+
     private static int GetDirectionAwayFrom(HexCoord from, HexCoord at)
     {
-        // The push direction is from the caster toward the target (away from caster)
         int bestDir = 0;
         int bestDist = int.MaxValue;
         HexCoord desired = at + (at - from);
@@ -56,25 +67,25 @@ public class PushResolver : ICardResolver
         return bestDir;
     }
 
-    private static HexCoord WalkDirection(HexCoord origin, int direction, int distance, Unit moving, HexGrid grid)
+    private static HexCoord WalkDirection(HexCoord origin, int direction, int distance, Unit moving, List<Unit> allUnits, HexGrid grid)
     {
         HexCoord current = origin;
         for (int i = 0; i < distance; i++)
         {
             HexCoord next = current.Neighbor(direction);
             if (!grid.TryGetTile(next, out _)) break;
-            if (IsOccupied(next, moving)) break;
+            if (IsOccupied(next, moving, allUnits)) break;
             current = next;
         }
         return current;
     }
 
-    private static bool IsOccupied(HexCoord coord, Unit exclude)
+    private static bool IsOccupied(HexCoord coord, Unit exclude, List<Unit> allUnits)
     {
-        foreach (var unit in Object.FindObjectsOfType<Unit>())
+        foreach (var unit in allUnits)
         {
             if (unit == exclude) continue;
-            if (unit.Coord == coord) return true;
+            if (unit.IsAlive && unit.Coord == coord) return true;
         }
         return false;
     }

@@ -19,4 +19,7 @@ public class CardAction
     [Header("Status Effect (only used when effect = Status)")]
     public StatusEffectType statusEffect;
     [Min(1)] public int statusStacks = 1;
+
+    [Tooltip("If true, this status targets the caster instead of enemies")]
+    public bool targetSelf;
 }

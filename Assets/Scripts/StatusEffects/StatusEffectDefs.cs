@@ -80,6 +80,19 @@ public static class StatusEffectDefs
                 BlocksAttackTargeting = true,
             }
         },
+        {
+            StatusEffectType.Swift, new Def
+            {
+                Name = "Swift",
+                Icon = "\u2192",                            // → arrow
+                IconColor = new Color(1f, 0.85f, 0.2f),    // yellow
+                MaxStacks = 3,
+                DamageTrigger = StatusTrigger.None,
+                DamagePerStack = 0,
+                DecayPerTurn = 1,
+                BlocksAttackTargeting = false,
+            }
+        },
     };
     // ────────────────────────────────────────────────────────────────────
 

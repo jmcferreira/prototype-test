@@ -10,4 +10,6 @@ public enum CardEffect
     Pull,
     Heal,
     Status,
+    Jump,
+    AttackAoE,
 }

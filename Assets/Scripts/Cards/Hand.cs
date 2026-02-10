@@ -52,15 +52,18 @@ public class Hand
     {
         switch (action.effect)
         {
-            case CardEffect.Move:   return $"Move {action.range}";
-            case CardEffect.Dash:   return $"Dash {action.range}";
-            case CardEffect.Attack: return $"Atk {action.damage} Rng {action.range}";
-            case CardEffect.Push:   return $"Push {action.pushDistance} Rng {action.range}";
-            case CardEffect.Pull:   return $"Pull {action.pushDistance} Rng {action.range}";
-            case CardEffect.Heal:   return $"Heal {action.damage}";
+            case CardEffect.Move:      return $"Move {action.range}";
+            case CardEffect.Dash:      return $"Dash {action.range}";
+            case CardEffect.Attack:    return $"Atk {action.damage} Rng {action.range}";
+            case CardEffect.Push:      return $"Push {action.pushDistance} Rng {action.range}";
+            case CardEffect.Pull:      return $"Pull {action.pushDistance} Rng {action.range}";
+            case CardEffect.Heal:      return $"Heal {action.damage}";
+            case CardEffect.Jump:      return $"Jump {action.range}";
+            case CardEffect.AttackAoE: return $"AoE {action.damage} Rng {action.range}";
             case CardEffect.Status:
                 var def = StatusEffectDefs.Get(action.statusEffect);
-                return $"{def.Name} {action.statusStacks} Rng {action.range}";
+                string self = action.targetSelf ? " (self)" : "";
+                return $"{def.Name} {action.statusStacks}{self} Rng {action.range}";
             default:                return action.effect.ToString();
         }
     }

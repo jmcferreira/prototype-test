@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Screen-space side panel showing a unit's portrait, name, HP, and status effects.
-/// Player panel anchors to the left, enemy to the right.
+/// Player panel anchors to the left, enemy panels stack on the right.
 /// Border colour brightens when it is that unit's turn.
 /// </summary>
 public class UnitInfoPanel : MonoBehaviour
@@ -20,7 +20,7 @@ public class UnitInfoPanel : MonoBehaviour
     private Color _borderActiveColor;
     private Color _borderInactiveColor;
 
-    public void Init(Unit unit, TurnManager turnManager, bool isLeft)
+    public void Init(Unit unit, TurnManager turnManager, bool isLeft, int stackIndex = 0)
     {
         _unit = unit;
         _turnManager = turnManager;
@@ -31,7 +31,7 @@ public class UnitInfoPanel : MonoBehaviour
         _borderActiveColor = teamColor;
         _borderInactiveColor = new Color(teamColor.r * 0.25f, teamColor.g * 0.25f, teamColor.b * 0.25f, 0.85f);
 
-        BuildPanel(isLeft, teamColor);
+        BuildPanel(isLeft, teamColor, stackIndex);
         Refresh();
 
         _unit.OnChanged += Refresh;
@@ -44,26 +44,28 @@ public class UnitInfoPanel : MonoBehaviour
 
     // ── Build ──────────────────────────────────────────────────────────
 
-    private void BuildPanel(bool isLeft, Color teamColor)
+    private void BuildPanel(bool isLeft, Color teamColor, int stackIndex)
     {
         var rect = gameObject.AddComponent<RectTransform>();
 
-        // Anchor left or right, vertically centred (nudged above the card bar)
         if (isLeft)
         {
             rect.anchorMin = new Vector2(0f, 0.5f);
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
             rect.anchoredPosition = new Vector2(12f, 80f);
+            rect.sizeDelta = new Vector2(180f, 260f);
         }
         else
         {
             rect.anchorMin = new Vector2(1f, 0.5f);
             rect.anchorMax = new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
-            rect.anchoredPosition = new Vector2(-12f, 80f);
+            // Stack multiple enemy panels vertically
+            float y = -100f + stackIndex * 200f;
+            rect.anchoredPosition = new Vector2(-12f, y);
+            rect.sizeDelta = new Vector2(170f, 190f);
         }
-        rect.sizeDelta = new Vector2(180f, 260f);
 
         // Coloured border (bright = active turn, dim = inactive)
         _borderImage = gameObject.AddComponent<Image>();
@@ -84,26 +86,27 @@ public class UnitInfoPanel : MonoBehaviour
 
         // Vertical layout
         var layout = innerGo.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(8, 8, 8, 8);
-        layout.spacing = 4;
+        layout.padding = new RectOffset(6, 6, 6, 6);
+        layout.spacing = 3;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
         // Avatar
-        BuildAvatar(innerGo.transform, teamColor);
+        int avatarSize = isLeft ? 100 : 60;
+        BuildAvatar(innerGo.transform, teamColor, avatarSize);
 
         // Name
-        _nameText = CreateText(innerGo.transform, "Name", 18, FontStyle.Bold, Color.white, 26);
+        _nameText = CreateText(innerGo.transform, "Name", isLeft ? 18 : 15, FontStyle.Bold, Color.white, isLeft ? 26 : 22);
 
         // HP
-        _hpText = CreateText(innerGo.transform, "HP", 24, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), 30);
+        _hpText = CreateText(innerGo.transform, "HP", isLeft ? 24 : 18, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), isLeft ? 30 : 24);
 
         // Status icons row
         BuildStatusRow(innerGo.transform);
     }
 
-    private void BuildAvatar(Transform parent, Color teamColor)
+    private void BuildAvatar(Transform parent, Color teamColor, int size)
     {
         var go = new GameObject("Avatar");
         go.transform.SetParent(parent, false);
@@ -112,15 +115,15 @@ public class UnitInfoPanel : MonoBehaviour
         img.color = Color.white;
         img.raycastTarget = false;
         var le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = 100;
-        le.preferredHeight = 100;
+        le.preferredWidth = size;
+        le.preferredHeight = size;
 
         // Large initial letter
         var letterGo = new GameObject("Letter");
         letterGo.transform.SetParent(go.transform, false);
         var txt = letterGo.AddComponent<Text>();
         txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        txt.fontSize = 48;
+        txt.fontSize = size > 80 ? 48 : 30;
         txt.fontStyle = FontStyle.Bold;
         txt.alignment = TextAnchor.MiddleCenter;
         txt.color = new Color(1f, 1f, 1f, 0.85f);
@@ -145,7 +148,7 @@ public class UnitInfoPanel : MonoBehaviour
         hl.childForceExpandWidth = false;
         hl.childForceExpandHeight = false;
         var le = go.AddComponent<LayoutElement>();
-        le.preferredHeight = 28;
+        le.preferredHeight = 24;
 
         foreach (var kvp in StatusEffectDefs.All)
         {
@@ -156,13 +159,13 @@ public class UnitInfoPanel : MonoBehaviour
             stGo.transform.SetParent(go.transform, false);
             var stText = stGo.AddComponent<Text>();
             stText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            stText.fontSize = 20;
+            stText.fontSize = 18;
             stText.alignment = TextAnchor.MiddleCenter;
             stText.color = def.IconColor;
             stText.raycastTarget = false;
             var stLe = stGo.AddComponent<LayoutElement>();
-            stLe.preferredWidth = 46;
-            stLe.preferredHeight = 28;
+            stLe.preferredWidth = 42;
+            stLe.preferredHeight = 24;
             stGo.SetActive(false);
             _statusTexts[type] = stText;
         }
@@ -240,7 +243,7 @@ public class UnitInfoPanel : MonoBehaviour
     private void Update()
     {
         if (_turnManager == null || _unit == null) return;
-        bool active = _turnManager.CurrentTeam == _unit.Team;
+        bool active = _turnManager.CurrentUnit == _unit;
         _borderImage.color = active ? _borderActiveColor : _borderInactiveColor;
     }
 }

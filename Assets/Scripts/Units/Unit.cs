@@ -25,12 +25,14 @@ public abstract class Unit : MonoBehaviour
     // --- Status effects ---
     private readonly Dictionary<StatusEffectType, int> _statuses = new();
 
-    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null)
+    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null, int maxHP = 3)
     {
         Team = team;
         DisplayName = displayName ?? team.ToString();
         _grid = grid;
         _hexSize = grid.HexSize;
+        MaxHP = maxHP;
+        HP = maxHP;
         Coord = startCoord;
         PlaceAt(startCoord);
         gameObject.name = DisplayName;
@@ -61,7 +63,7 @@ public abstract class Unit : MonoBehaviour
     public void TakeHit(int damage)
     {
         HP -= damage;
-        Debug.Log($"{Team} took {damage} damage — HP: {HP}");
+        Debug.Log($"{DisplayName} took {damage} damage — HP: {HP}");
         NotifyChanged();
     }
 
@@ -71,7 +73,7 @@ public abstract class Unit : MonoBehaviour
     public void Heal(int amount)
     {
         HP = Mathf.Min(HP + amount, MaxHP);
-        Debug.Log($"{Team} healed {amount} — HP: {HP}");
+        Debug.Log($"{DisplayName} healed {amount} — HP: {HP}");
         NotifyChanged();
     }
 
@@ -86,7 +88,7 @@ public abstract class Unit : MonoBehaviour
         int current = GetStatusStacks(type);
         int newStacks = Mathf.Min(current + stacks, def.MaxStacks);
         _statuses[type] = newStacks;
-        Debug.Log($"{Team} gained {stacks} {def.Name} (now {newStacks}/{def.MaxStacks})");
+        Debug.Log($"{DisplayName} gained {stacks} {def.Name} (now {newStacks}/{def.MaxStacks})");
         NotifyChanged();
     }
 
@@ -121,7 +123,7 @@ public abstract class Unit : MonoBehaviour
             if (dmg > 0)
             {
                 TakeHit(dmg);
-                Debug.Log($"{Team} took {dmg} {def.Name} damage ({stacks} stacks)");
+                Debug.Log($"{DisplayName} took {dmg} {def.Name} damage ({stacks} stacks)");
             }
         }
     }
@@ -143,12 +145,12 @@ public abstract class Unit : MonoBehaviour
             if (newStacks <= 0)
             {
                 toRemove.Add(type);
-                Debug.Log($"{Team} {def.Name} wore off.");
+                Debug.Log($"{DisplayName} {def.Name} wore off.");
             }
             else
             {
                 _statuses[type] = newStacks;
-                Debug.Log($"{Team} {def.Name} decayed to {newStacks} stacks.");
+                Debug.Log($"{DisplayName} {def.Name} decayed to {newStacks} stacks.");
             }
         }
         foreach (var t in toRemove)

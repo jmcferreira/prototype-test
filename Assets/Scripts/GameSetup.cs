@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,34 +26,44 @@ public class GameSetup : MonoBehaviour
 
     private void Setup()
     {
+        // --- Player ---
         var playerCoord = new HexCoord(1, 1);
-        var enemyCoord = new HexCoord(5, 1);
-
         var playerGo = new GameObject();
         var player = playerGo.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, playerCoord, hexGrid, "Player 1");
+        player.Init(Team.Player, playerCoord, hexGrid, "Player 1", 3);
 
         // Load from Inspector or fall back to Resources/Cards
         if (playerCards == null || playerCards.Length == 0)
             playerCards = Resources.LoadAll<CardData>("Cards/Player");
-        if (enemyCards == null || enemyCards.Length == 0)
-            enemyCards = Resources.LoadAll<CardData>("Cards/Enemy");
-
-        // Final fallback: create in code
         if (playerCards.Length == 0) playerCards = CreateDefaultPlayerCards();
-        if (enemyCards.Length == 0) enemyCards = CreateDefaultEnemyCards();
-
-        var enemyGo = new GameObject();
-        var enemy = enemyGo.AddComponent<EnemyUnit>();
-        enemy.Init(Team.Enemy, enemyCoord, hexGrid, "Spider");
-        enemy.InitCards(enemyCards);
-        enemy.SetPlayer(player);
-
-        var interactionGo = new GameObject("HexInteraction");
-        var hexInteraction = interactionGo.AddComponent<HexInteraction>();
 
         player.InitHand(playerCards);
-        player.SetEnemy(enemy);
+
+        // --- Enemies ---
+        var spiderCards = CreateSpiderCards();
+        var orcCards = CreateOrcCards();
+
+        // Spider 1
+        var spider1Go = new GameObject();
+        var spider1 = spider1Go.AddComponent<EnemyUnit>();
+        spider1.Init(Team.Enemy, new HexCoord(4, 0), hexGrid, "Spider 1", 3);
+        spider1.InitCards(spiderCards);
+
+        // Spider 2
+        var spider2Go = new GameObject();
+        var spider2 = spider2Go.AddComponent<EnemyUnit>();
+        spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3);
+        spider2.InitCards(CreateSpiderCards()); // separate instances
+
+        // Orc
+        var orcGo = new GameObject();
+        var orc = orcGo.AddComponent<EnemyUnit>();
+        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6);
+        orc.InitCards(orcCards);
+
+        // --- HexInteraction ---
+        var interactionGo = new GameObject("HexInteraction");
+        var hexInteraction = interactionGo.AddComponent<HexInteraction>();
         player.SetHexInteraction(hexInteraction);
 
         // --- Shared UI canvas ---
@@ -66,7 +77,6 @@ public class GameSetup : MonoBehaviour
         // Hand UI (card bar at bottom)
         var handUIGo = new GameObject("HandUI");
         handUIGo.transform.SetParent(uiGo.transform, false);
-        // Give it a full-screen RectTransform so child anchors work correctly
         var handRect = handUIGo.AddComponent<RectTransform>();
         handRect.anchorMin = Vector2.zero;
         handRect.anchorMax = Vector2.one;
@@ -76,31 +86,43 @@ public class GameSetup : MonoBehaviour
         handUI.Init(player.Hand);
         player.SetHandUI(handUI);
 
-        // Turn manager (needed before side panels for turn highlight)
+        // --- Turn manager ---
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
         player.SetTurnManager(turnManager);
-        enemy.SetTurnManager(turnManager);
+        spider1.SetTurnManager(turnManager);
+        spider2.SetTurnManager(turnManager);
+        orc.SetTurnManager(turnManager);
 
-        // Side panels — player on the left, enemy on the right
+        // --- Side panels ---
+        // Player on the left
         var playerPanelGo = new GameObject("PlayerInfoPanel");
         playerPanelGo.transform.SetParent(uiGo.transform, false);
         var playerPanel = playerPanelGo.AddComponent<UnitInfoPanel>();
         playerPanel.Init(player, turnManager, true);
 
-        var enemyPanelGo = new GameObject("EnemyInfoPanel");
-        enemyPanelGo.transform.SetParent(uiGo.transform, false);
-        var enemyPanel = enemyPanelGo.AddComponent<UnitInfoPanel>();
-        enemyPanel.Init(enemy, turnManager, false);
+        // Enemies stacked on the right
+        var enemies = new EnemyUnit[] { spider1, spider2, orc };
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            var panelGo = new GameObject($"EnemyPanel_{enemies[i].DisplayName}");
+            panelGo.transform.SetParent(uiGo.transform, false);
+            var panel = panelGo.AddComponent<UnitInfoPanel>();
+            panel.Init(enemies[i], turnManager, false, i);
+        }
 
-        turnManager.Begin(player, enemy);
+        // --- Start the game ---
+        var turnOrder = new List<Unit> { player, spider1, spider2, orc };
+        turnManager.Begin(turnOrder);
 
         // Camera controls (zoom + pan)
         if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
             Camera.main.gameObject.AddComponent<CameraController>();
 
-        Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
+        Debug.Log($"Player at {playerCoord}, Spider 1 at (4,0), Spider 2 at (5,-1), Orc at (3,3)");
     }
+
+    // ── Default card definitions ────────────────────────────────────────
 
     private static CardData[] CreateDefaultPlayerCards()
     {
@@ -147,29 +169,51 @@ public class GameSetup : MonoBehaviour
         return new[] { dashStrike, fireshot, exorcize, hook };
     }
 
-    private static CardData[] CreateDefaultEnemyCards()
+    private static CardData[] CreateSpiderCards()
     {
-        // Claw: Attack 1
-        var claw = ScriptableObject.CreateInstance<CardData>();
-        claw.cardName = "Claw";
-        claw.actions = new[] { new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 } };
-        claw.cooldown = 1;
-
-        // Advance: Move 1
-        var advance = ScriptableObject.CreateInstance<CardData>();
-        advance.cardName = "Advance";
-        advance.actions = new[] { new CardAction { effect = CardEffect.Move, range = 1 } };
-        advance.cooldown = 1;
-
-        // Poison Spit: Poison 1 Range 2
-        var spit = ScriptableObject.CreateInstance<CardData>();
-        spit.cardName = "Poison Spit";
-        spit.actions = new[]
+        // Card 1 — Web Leap: Jump 2
+        var webLeap = ScriptableObject.CreateInstance<CardData>();
+        webLeap.cardName = "Web Leap";
+        webLeap.actions = new[]
         {
-            new CardAction { effect = CardEffect.Status, range = 2, statusEffect = StatusEffectType.Poison, statusStacks = 1 },
+            new CardAction { effect = CardEffect.Jump, range = 2 },
         };
-        spit.cooldown = 2;
+        webLeap.cooldown = 1;
 
-        return new[] { claw, advance, spit };
+        // Card 2 — Venomous Bite: Attack 1 Range 3 → Poison 1 Range 3
+        var venomBite = ScriptableObject.CreateInstance<CardData>();
+        venomBite.cardName = "Venomous Bite";
+        venomBite.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 },
+            new CardAction { effect = CardEffect.Status, range = 3, statusEffect = StatusEffectType.Poison, statusStacks = 1 },
+        };
+        venomBite.cooldown = 2;
+
+        return new[] { webLeap, venomBite };
+    }
+
+    private static CardData[] CreateOrcCards()
+    {
+        // Card 1 — War March: Move 2 → Swift 1 (self)
+        var warMarch = ScriptableObject.CreateInstance<CardData>();
+        warMarch.cardName = "War March";
+        warMarch.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Move, range = 2 },
+            new CardAction { effect = CardEffect.Status, range = 0, statusEffect = StatusEffectType.Swift, statusStacks = 1, targetSelf = true },
+        };
+        warMarch.cooldown = 1;
+
+        // Card 2 — Cleave: AttackAoE 3 Range 1 (all adjacent targets)
+        var cleave = ScriptableObject.CreateInstance<CardData>();
+        cleave.cardName = "Cleave";
+        cleave.actions = new[]
+        {
+            new CardAction { effect = CardEffect.AttackAoE, range = 1, damage = 3 },
+        };
+        cleave.cooldown = 2;
+
+        return new[] { warMarch, cleave };
     }
 }

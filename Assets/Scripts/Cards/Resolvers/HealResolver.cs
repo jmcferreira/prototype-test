@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class HealResolver : ICardResolver
 {
-    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, Unit enemy, HexGrid grid)
+    public List<HexCoord> GetValidTargets(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid)
     {
         var targets = new List<HexCoord>();
         if (caster.HP < caster.MaxHP)
@@ -15,7 +15,7 @@ public class HealResolver : ICardResolver
         return targets;
     }
 
-    public void Resolve(CardAction action, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
+    public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
         caster.Heal(action.damage);
     }
