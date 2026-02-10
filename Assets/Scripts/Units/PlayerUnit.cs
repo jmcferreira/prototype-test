@@ -129,6 +129,7 @@ public class PlayerUnit : Unit
         _selectedCardIndex = index;
         _currentActionIndex = 0;
         _handUI?.SetSelectedCard(index);
+        _handUI?.ShowExpandedCard(card.Data);
         _state = State.CardSelected;
         Debug.Log($"[{card.Data.cardName}] selected.");
         ShowCurrentAction();
