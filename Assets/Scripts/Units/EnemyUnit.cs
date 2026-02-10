@@ -56,23 +56,43 @@ public class EnemyUnit : Unit
             yield break;
         }
 
-        // Try each card in priority order
+        // Try each card — prefer cards that can deal damage
         CardInstance chosenCard = null;
+
+        // First pass: find a card with an Attack/AttackAoE action that has valid targets
         foreach (var card in _cards)
         {
             if (!card.IsReady || card.ActionCount == 0) continue;
 
-            // Check if at least one action has valid targets
-            bool anyActionValid = false;
+            bool canDealDamage = false;
             for (int i = 0; i < card.ActionCount; i++)
             {
+                var action = card.GetAction(i);
                 var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
-                if (targets.Count > 0) { anyActionValid = true; break; }
+                if (targets.Count > 0 &&
+                    (action.effect == CardEffect.Attack || action.effect == CardEffect.AttackAoE))
+                {
+                    canDealDamage = true;
+                    break;
+                }
             }
-            if (!anyActionValid) continue;
+            if (canDealDamage) { chosenCard = card; break; }
+        }
 
-            chosenCard = card;
-            break;
+        // Second pass: fall back to any card with at least one valid action
+        if (chosenCard == null)
+        {
+            foreach (var card in _cards)
+            {
+                if (!card.IsReady || card.ActionCount == 0) continue;
+
+                for (int i = 0; i < card.ActionCount; i++)
+                {
+                    var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
+                    if (targets.Count > 0) { chosenCard = card; break; }
+                }
+                if (chosenCard != null) break;
+            }
         }
 
         if (chosenCard == null)

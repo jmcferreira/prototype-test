@@ -70,7 +70,7 @@ public abstract class Unit : MonoBehaviour
         var tm = labelGo.AddComponent<TextMesh>();
         tm.text = label;
         tm.fontSize = 64;
-        tm.characterSize = 0.12f;
+        tm.characterSize = 0.08f;
         tm.anchor = TextAnchor.MiddleCenter;
         tm.alignment = TextAlignment.Center;
         tm.color = Color.white;

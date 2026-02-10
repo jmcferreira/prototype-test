@@ -30,7 +30,7 @@ public class GameSetup : MonoBehaviour
         var playerCoord = new HexCoord(1, 1);
         var playerGo = new GameObject();
         var player = playerGo.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, playerCoord, hexGrid, "Player 1", 3, "P1");
+        player.Init(Team.Player, playerCoord, hexGrid, "Player 1", 10, "P1");
 
         // Load from Inspector or fall back to Resources/Cards
         if (playerCards == null || playerCards.Length == 0)
