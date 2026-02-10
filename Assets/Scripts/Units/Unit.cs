@@ -101,7 +101,8 @@ public abstract class Unit : MonoBehaviour
     {
         HP = Mathf.Max(0, HP - damage);
         Debug.Log($"{DisplayName} took {damage} damage — HP: {HP}");
-        SpawnDamageNumber(damage);
+        if (damage > 0)
+            SpawnDamageNumber(damage);
         if (HP <= 0)
             HideVisuals();
         NotifyChanged();

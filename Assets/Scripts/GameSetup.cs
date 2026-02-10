@@ -192,13 +192,13 @@ public class GameSetup : MonoBehaviour
         };
         webLeap.cooldown = 1;
 
-        // Card 2 — Venomous Bite: Attack 1 Range 3 → Poison 1 Range 3
+        // Card 2 — Venomous Bite: Attack 0 Range 3 → Poison 2 Range 3
         var venomBite = ScriptableObject.CreateInstance<CardData>();
         venomBite.cardName = "Venomous Bite";
         venomBite.actions = new[]
         {
-            new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 },
-            new CardAction { effect = CardEffect.Status, range = 3, statusEffect = StatusEffectType.Poison, statusStacks = 1 },
+            new CardAction { effect = CardEffect.Attack, range = 3, damage = 0 },
+            new CardAction { effect = CardEffect.Status, range = 3, statusEffect = StatusEffectType.Poison, statusStacks = 2 },
         };
         venomBite.cooldown = 2;
 
