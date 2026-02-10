@@ -16,6 +16,8 @@ public class PlayerUnit : Unit
     private CardInstance _selectedCard;
     private int _selectedCardIndex = -1;
     private List<HexCoord> _validTargets;
+    private HashSet<HexCoord> _validTargetSet;
+    private HexTile _hoveredTargetTile;
     private Unit _enemy;
     private HexInteraction _hexInteraction;
     private TurnManager _turnManager;
@@ -58,9 +60,11 @@ public class PlayerUnit : Unit
 
     public override void OnTurnEnd()
     {
+        ClearTargetHover();
         ClearHighlights();
         _selectedCard = null;
         _selectedCardIndex = -1;
+        _validTargetSet = null;
         _handUI?.SetSelectedCard(-1);
         _state = State.Inactive;
     }
@@ -117,36 +121,65 @@ public class PlayerUnit : Unit
         _selectedCard = card;
         _selectedCardIndex = index;
         _validTargets = targets;
+        _validTargetSet = new HashSet<HexCoord>(targets);
+        _hoveredTargetTile = null;
         HighlightTargets(true);
         _handUI?.SetSelectedCard(index);
         _state = State.CardSelected;
-        Debug.Log($"[{card.Data.cardName}] selected — click a highlighted hex to resolve.");
+        Debug.Log($"[{card.Data.cardName}] selected — click a highlighted hex.");
     }
 
     private void UpdateCardSelected()
     {
+        // Track hover over valid targets
+        var tileUnderMouse = _hexInteraction?.GetTileUnderMouse();
+        UpdateTargetHover(tileUnderMouse);
+
         if (!Input.GetMouseButtonDown(0)) return;
+        if (tileUnderMouse == null) return;
 
-        var tile = _hexInteraction?.SelectedTile;
-        if (tile == null) return;
+        HexCoord clicked = tileUnderMouse.Coord;
 
-        HexCoord clicked = tile.Coord;
-
-        if (!_validTargets.Contains(clicked))
-        {
-            Debug.Log($"{clicked} is not a valid target for [{_selectedCard.Data.cardName}].");
-            return;
-        }
+        if (!_validTargetSet.Contains(clicked)) return;
 
         // Resolve and end turn
+        ClearTargetHover();
         _selectedCard.Resolve(this, _enemy, Grid, clicked);
         ClearHighlights();
         _hexInteraction?.ClearSelection();
         _selectedCard = null;
         _selectedCardIndex = -1;
+        _validTargetSet = null;
         _handUI?.SetSelectedCard(-1);
         _handUI?.Refresh(Hand);
         _turnManager.EndCurrentTurn();
+    }
+
+    private void UpdateTargetHover(HexTile tileUnderMouse)
+    {
+        // Clear previous hover
+        if (_hoveredTargetTile != null && _hoveredTargetTile != tileUnderMouse)
+            _hoveredTargetTile.SetTargetHovered(false);
+
+        // Apply hover if over a valid target
+        if (tileUnderMouse != null && _validTargetSet.Contains(tileUnderMouse.Coord))
+        {
+            tileUnderMouse.SetTargetHovered(true);
+            _hoveredTargetTile = tileUnderMouse;
+        }
+        else
+        {
+            _hoveredTargetTile = null;
+        }
+    }
+
+    private void ClearTargetHover()
+    {
+        if (_hoveredTargetTile != null)
+        {
+            _hoveredTargetTile.SetTargetHovered(false);
+            _hoveredTargetTile = null;
+        }
     }
 
     // --- Helpers ---

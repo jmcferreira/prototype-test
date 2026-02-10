@@ -7,15 +7,17 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HexTile : MonoBehaviour
 {
-    private static readonly Color DefaultColor  = new Color(0.85f, 0.9f, 0.85f);
-    private static readonly Color HoverColor    = new Color(0.95f, 1f, 0.8f);
-    private static readonly Color SelectedColor = new Color(0.4f, 0.8f, 1f);
+    private static readonly Color DefaultColor      = new Color(0.85f, 0.9f, 0.85f);
+    private static readonly Color HoverColor        = new Color(0.95f, 1f, 0.8f);
+    private static readonly Color SelectedColor     = new Color(0.4f, 0.8f, 1f);
+    private static readonly Color TargetHoverColor  = new Color(0.2f, 0.65f, 0.95f);
 
     public HexCoord Coord { get; private set; }
 
     private static Mesh _sharedHexMesh;
     private Material _mat;
     private bool _isSelected;
+    private bool _isTargetHovered;
 
     public void Init(HexCoord coord, float hexSize)
     {
@@ -45,7 +47,19 @@ public class HexTile : MonoBehaviour
     public void SetSelected(bool selected)
     {
         _isSelected = selected;
+        _isTargetHovered = false;
         _mat.color = selected ? SelectedColor : DefaultColor;
+    }
+
+    /// <summary>
+    /// Hover effect for valid-target tiles (brighter than selected).
+    /// Only works when the tile is already selected (highlighted as a target).
+    /// </summary>
+    public void SetTargetHovered(bool hovered)
+    {
+        if (!_isSelected) return;
+        _isTargetHovered = hovered;
+        _mat.color = hovered ? TargetHoverColor : SelectedColor;
     }
 
     /// <summary>

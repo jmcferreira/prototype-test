@@ -88,7 +88,7 @@ public class HexInteraction : MonoBehaviour
         }
     }
 
-    private HexTile GetTileUnderMouse()
+    public HexTile GetTileUnderMouse()
     {
         if (_cam == null || _grid == null) return null;
 
