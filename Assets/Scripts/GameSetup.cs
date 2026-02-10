@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Bootstraps the game: waits for the grid, spawns units, starts the turn loop.
@@ -54,15 +55,44 @@ public class GameSetup : MonoBehaviour
         player.SetEnemy(enemy);
         player.SetHexInteraction(hexInteraction);
 
+        // --- Shared UI canvas ---
+        var uiGo = new GameObject("GameUI");
+        var canvas = uiGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 10;
+        uiGo.AddComponent<CanvasScaler>();
+        uiGo.AddComponent<GraphicRaycaster>();
+
+        // Hand UI (card bar at bottom)
         var handUIGo = new GameObject("HandUI");
+        handUIGo.transform.SetParent(uiGo.transform, false);
+        // Give it a full-screen RectTransform so child anchors work correctly
+        var handRect = handUIGo.AddComponent<RectTransform>();
+        handRect.anchorMin = Vector2.zero;
+        handRect.anchorMax = Vector2.one;
+        handRect.offsetMin = Vector2.zero;
+        handRect.offsetMax = Vector2.zero;
         var handUI = handUIGo.AddComponent<HandUI>();
         handUI.Init(player.Hand);
         player.SetHandUI(handUI);
 
+        // Turn manager (needed before side panels for turn highlight)
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
         player.SetTurnManager(turnManager);
         enemy.SetTurnManager(turnManager);
+
+        // Side panels — player on the left, enemy on the right
+        var playerPanelGo = new GameObject("PlayerInfoPanel");
+        playerPanelGo.transform.SetParent(uiGo.transform, false);
+        var playerPanel = playerPanelGo.AddComponent<UnitInfoPanel>();
+        playerPanel.Init(player, turnManager, true);
+
+        var enemyPanelGo = new GameObject("EnemyInfoPanel");
+        enemyPanelGo.transform.SetParent(uiGo.transform, false);
+        var enemyPanel = enemyPanelGo.AddComponent<UnitInfoPanel>();
+        enemyPanel.Init(enemy, turnManager, false);
+
         turnManager.Begin(player, enemy);
 
         // Camera controls (zoom + pan)

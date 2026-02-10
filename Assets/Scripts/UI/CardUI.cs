@@ -24,7 +24,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private static readonly Color SelectedColor = new Color(0.6f, 0.85f, 1f);
 
     private static readonly Vector3 NormalScale = Vector3.one;
-    private static readonly Vector3 HoverScale = new Vector3(1.2f, 1.2f, 1f);
+    private static readonly Vector3 HoverScale = new Vector3(1.15f, 1.15f, 1f);
 
     private bool _selected;
     private bool _hovered;
@@ -54,7 +54,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         nameGo.transform.SetParent(transform, false);
         _nameText = nameGo.AddComponent<Text>();
         _nameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _nameText.fontSize = 14;
+        _nameText.fontSize = 22;
         _nameText.fontStyle = FontStyle.Bold;
         _nameText.alignment = TextAnchor.MiddleCenter;
         _nameText.color = Color.black;
@@ -62,38 +62,38 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         var nameRect = nameGo.GetComponent<RectTransform>();
         nameRect.anchorMin = new Vector2(0, 0.66f);
         nameRect.anchorMax = new Vector2(1, 1f);
-        nameRect.offsetMin = Vector2.zero;
-        nameRect.offsetMax = Vector2.zero;
+        nameRect.offsetMin = new Vector2(4, 0);
+        nameRect.offsetMax = new Vector2(-4, 0);
 
         // Effect description (middle third)
         var descGo = new GameObject("Description");
         descGo.transform.SetParent(transform, false);
         _descText = descGo.AddComponent<Text>();
         _descText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _descText.fontSize = 12;
+        _descText.fontSize = 18;
         _descText.alignment = TextAnchor.MiddleCenter;
         _descText.color = new Color(0.2f, 0.2f, 0.2f);
 
         var descRect = descGo.GetComponent<RectTransform>();
         descRect.anchorMin = new Vector2(0, 0.33f);
         descRect.anchorMax = new Vector2(1, 0.66f);
-        descRect.offsetMin = Vector2.zero;
-        descRect.offsetMax = Vector2.zero;
+        descRect.offsetMin = new Vector2(4, 0);
+        descRect.offsetMax = new Vector2(-4, 0);
 
         // Cooldown text (bottom third)
         var cdGo = new GameObject("Cooldown");
         cdGo.transform.SetParent(transform, false);
         _cooldownText = cdGo.AddComponent<Text>();
         _cooldownText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _cooldownText.fontSize = 11;
+        _cooldownText.fontSize = 16;
         _cooldownText.alignment = TextAnchor.MiddleCenter;
         _cooldownText.color = new Color(0.35f, 0.35f, 0.35f);
 
         var cdRect = cdGo.GetComponent<RectTransform>();
         cdRect.anchorMin = new Vector2(0, 0f);
         cdRect.anchorMax = new Vector2(1, 0.33f);
-        cdRect.offsetMin = Vector2.zero;
-        cdRect.offsetMax = Vector2.zero;
+        cdRect.offsetMin = new Vector2(4, 0);
+        cdRect.offsetMax = new Vector2(-4, 0);
     }
 
     /// <summary>

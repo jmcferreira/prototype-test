@@ -34,12 +34,16 @@ public class HandUI : MonoBehaviour
             esGo.AddComponent<StandaloneInputModule>();
         }
 
-        // Screen-space overlay canvas
-        _canvas = gameObject.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 10;
-        gameObject.AddComponent<CanvasScaler>();
-        gameObject.AddComponent<GraphicRaycaster>();
+        // Reuse parent canvas if already under one, otherwise create our own
+        _canvas = GetComponentInParent<Canvas>();
+        if (_canvas == null)
+        {
+            _canvas = gameObject.AddComponent<Canvas>();
+            _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _canvas.sortingOrder = 10;
+            gameObject.AddComponent<CanvasScaler>();
+            gameObject.AddComponent<GraphicRaycaster>();
+        }
 
         // Dark background strip across the bottom
         var bgGo = new GameObject("Background");
@@ -53,7 +57,7 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 130f);
+        bgRect.sizeDelta = new Vector2(0f, 240f);
 
         // Action step label + Skip button (above cards, hidden by default)
         BuildActionStepUI();
@@ -65,10 +69,10 @@ public class HandUI : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0f);
         panelRect.anchorMax = new Vector2(0.5f, 0f);
         panelRect.pivot = new Vector2(0.5f, 0f);
-        panelRect.anchoredPosition = new Vector2(0f, 10f);
+        panelRect.anchoredPosition = new Vector2(0f, 15f);
 
         var layout = panelGo.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 8;
+        layout.spacing = 14;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
@@ -85,8 +89,8 @@ public class HandUI : MonoBehaviour
 
             var cardRect = cardGo.AddComponent<RectTransform>();
             var le = cardGo.AddComponent<LayoutElement>();
-            le.preferredWidth = 130;
-            le.preferredHeight = 90;
+            le.preferredWidth = 240;
+            le.preferredHeight = 160;
 
             var cardUI = cardGo.AddComponent<CardUI>();
             cardUI.Build();
@@ -103,8 +107,8 @@ public class HandUI : MonoBehaviour
 
         var passRect = passGo.AddComponent<RectTransform>();
         var passLe = passGo.AddComponent<LayoutElement>();
-        passLe.preferredWidth = 60;
-        passLe.preferredHeight = 70;
+        passLe.preferredWidth = 110;
+        passLe.preferredHeight = 130;
 
         var passBg = passGo.AddComponent<Image>();
         passBg.color = new Color(0.85f, 0.75f, 0.65f);
@@ -117,7 +121,7 @@ public class HandUI : MonoBehaviour
         passTextGo.transform.SetParent(passGo.transform, false);
         var passText = passTextGo.AddComponent<Text>();
         passText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        passText.fontSize = 14;
+        passText.fontSize = 24;
         passText.alignment = TextAnchor.MiddleCenter;
         passText.color = Color.black;
         passText.text = "Pass";
@@ -140,10 +144,10 @@ public class HandUI : MonoBehaviour
         stepRect.anchorMin = new Vector2(0.5f, 0f);
         stepRect.anchorMax = new Vector2(0.5f, 0f);
         stepRect.pivot = new Vector2(0.5f, 0f);
-        stepRect.anchoredPosition = new Vector2(0f, 105f);
+        stepRect.anchoredPosition = new Vector2(0f, 250f);
 
         var stepLayout = _actionStepGo.AddComponent<HorizontalLayoutGroup>();
-        stepLayout.spacing = 10;
+        stepLayout.spacing = 14;
         stepLayout.childAlignment = TextAnchor.MiddleCenter;
         stepLayout.childForceExpandWidth = false;
         stepLayout.childForceExpandHeight = false;
@@ -157,33 +161,32 @@ public class HandUI : MonoBehaviour
         labelGo.transform.SetParent(_actionStepGo.transform, false);
         _actionStepText = labelGo.AddComponent<Text>();
         _actionStepText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _actionStepText.fontSize = 14;
+        _actionStepText.fontSize = 24;
         _actionStepText.alignment = TextAnchor.MiddleCenter;
         _actionStepText.color = Color.white;
         var labelLe = labelGo.AddComponent<LayoutElement>();
-        labelLe.preferredHeight = 24;
+        labelLe.preferredHeight = 40;
 
         // Skip button
         _skipButtonGo = new GameObject("SkipButton");
         _skipButtonGo.transform.SetParent(_actionStepGo.transform, false);
-        var skipGo = _skipButtonGo;
 
-        var skipLe = skipGo.AddComponent<LayoutElement>();
-        skipLe.preferredWidth = 50;
-        skipLe.preferredHeight = 24;
+        var skipLe = _skipButtonGo.AddComponent<LayoutElement>();
+        skipLe.preferredWidth = 100;
+        skipLe.preferredHeight = 40;
 
-        var skipBg = skipGo.AddComponent<Image>();
+        var skipBg = _skipButtonGo.AddComponent<Image>();
         skipBg.color = new Color(0.7f, 0.55f, 0.55f);
 
-        var skipBtn = skipGo.AddComponent<Button>();
+        var skipBtn = _skipButtonGo.AddComponent<Button>();
         skipBtn.targetGraphic = skipBg;
         skipBtn.onClick.AddListener(() => OnSkipClicked?.Invoke());
 
         var skipTextGo = new GameObject("Text");
-        skipTextGo.transform.SetParent(skipGo.transform, false);
+        skipTextGo.transform.SetParent(_skipButtonGo.transform, false);
         var skipText = skipTextGo.AddComponent<Text>();
         skipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        skipText.fontSize = 12;
+        skipText.fontSize = 20;
         skipText.alignment = TextAnchor.MiddleCenter;
         skipText.color = Color.white;
         skipText.text = "Skip";
