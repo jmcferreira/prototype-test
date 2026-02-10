@@ -138,47 +138,62 @@ public class GameSetup : MonoBehaviour
 
     private static CardData[] CreateDefaultPlayerCards()
     {
-        // Card 1 — Dash Strike: Dash 2 (mandatory) → Attack 1
-        var dashStrike = ScriptableObject.CreateInstance<CardData>();
-        dashStrike.cardName = "Dash Strike";
-        dashStrike.actions = new[]
+        // Card 1 — Volley: Move 2 → Attack 1 Range 2 (up to 2 targets)
+        var volley = ScriptableObject.CreateInstance<CardData>();
+        volley.cardName = "Volley";
+        volley.actions = new[]
         {
-            new CardAction { effect = CardEffect.Dash, range = 2, mandatory = true },
-            new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 },
+            new CardAction { effect = CardEffect.Move, range = 2 },
+            new CardAction { effect = CardEffect.Attack, range = 2, damage = 1, maxTargets = 2 },
         };
-        dashStrike.cooldown = 2;
+        volley.cooldown = 0;
 
-        // Card 2 — Fireshot: Attack 1 Range 3 → Burn 1 Range 3
-        var fireshot = ScriptableObject.CreateInstance<CardData>();
-        fireshot.cardName = "Fireshot";
-        fireshot.actions = new[]
+        // Card 2 — Firebolt: Line Attack 2 Range 3 + Burn 2 → Move 1
+        var firebolt = ScriptableObject.CreateInstance<CardData>();
+        firebolt.cardName = "Firebolt";
+        firebolt.actions = new[]
         {
-            new CardAction { effect = CardEffect.Attack, range = 3, damage = 1 },
-            new CardAction { effect = CardEffect.Status, range = 3, statusEffect = StatusEffectType.Burn, statusStacks = 1 },
+            new CardAction { effect = CardEffect.AttackLine, range = 3, damage = 2,
+                             statusEffect = StatusEffectType.Burn, statusStacks = 2 },
+            new CardAction { effect = CardEffect.Move, range = 1 },
         };
-        fireshot.cooldown = 2;
+        firebolt.cooldown = 1;
 
-        // Card 3 — Exorcize: Attack 1 → Push 2
-        var exorcize = ScriptableObject.CreateInstance<CardData>();
-        exorcize.cardName = "Exorcize";
-        exorcize.actions = new[]
+        // Card 3 — Quick Maneuver: Push All 1 Range 1 → Move 2
+        var quickManeuver = ScriptableObject.CreateInstance<CardData>();
+        quickManeuver.cardName = "Quick Maneuver";
+        quickManeuver.actions = new[]
         {
-            new CardAction { effect = CardEffect.Attack, range = 1, damage = 1 },
-            new CardAction { effect = CardEffect.Push, range = 1, pushDistance = 2 },
+            new CardAction { effect = CardEffect.PushAoE, range = 1, pushDistance = 1 },
+            new CardAction { effect = CardEffect.Move, range = 2 },
         };
-        exorcize.cooldown = 2;
+        quickManeuver.cooldown = 2;
 
-        // Card 4 — Grappling Hook: Pull 2 Range 3 → Heal 1
-        var hook = ScriptableObject.CreateInstance<CardData>();
-        hook.cardName = "Grappling Hook";
-        hook.actions = new[]
+        // Card 4 — Crippling Shot: Attack 2 Range 2 + Root 1 → Reduce CD on Headshot
+        var cripplingShot = ScriptableObject.CreateInstance<CardData>();
+        cripplingShot.cardName = "Crippling Shot";
+        cripplingShot.actions = new[]
         {
-            new CardAction { effect = CardEffect.Pull, range = 3, pushDistance = 2 },
-            new CardAction { effect = CardEffect.Heal, range = 1, damage = 1 },
+            new CardAction { effect = CardEffect.Attack, range = 2, damage = 2,
+                             statusEffect = StatusEffectType.Root, statusStacks = 1 },
+            new CardAction { effect = CardEffect.ReduceCooldown, targetCardIndex = 4 },
         };
-        hook.cooldown = 3;
+        cripplingShot.cooldown = 3;
 
-        return new[] { dashStrike, fireshot, exorcize, hook };
+        // Card 5 — Headshot! (Ultimate): Move 2 → Attack 3 Range 3 (5 at max range)
+        // Starts on cooldown 6
+        var headshot = ScriptableObject.CreateInstance<CardData>();
+        headshot.cardName = "Headshot!";
+        headshot.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Move, range = 2 },
+            new CardAction { effect = CardEffect.Attack, range = 3, damage = 3,
+                             bonusDamage = 2, bonusDamageAtMaxRange = true },
+        };
+        headshot.cooldown = 6;
+        headshot.startCooldown = 6;
+
+        return new[] { volley, firebolt, quickManeuver, cripplingShot, headshot };
     }
 
     private static CardData[] CreateSpiderCards()

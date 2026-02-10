@@ -6,6 +6,7 @@ using UnityEngine;
 /// Enemy unit. On its turn, picks the first ready card and executes
 /// all of its actions step-by-step with visible delays (like the player flow).
 /// Highlights valid targets, picks the best one, resolves, then advances.
+/// Supports multi-target attacks, auto-resolve effects, and new card types.
 /// </summary>
 public class EnemyUnit : Unit
 {
@@ -28,6 +29,12 @@ public class EnemyUnit : Unit
     public void SetTurnManager(TurnManager turnManager)
     {
         _turnManager = turnManager;
+    }
+
+    public override void ReduceCardCooldown(int cardIndex, int amount)
+    {
+        if (cardIndex >= 0 && cardIndex < _cards.Count)
+            _cards[cardIndex].ReduceCooldown(amount);
     }
 
     public override void OnTurnStart()
@@ -59,7 +66,7 @@ public class EnemyUnit : Unit
         // Try each card — prefer cards that can deal damage
         CardInstance chosenCard = null;
 
-        // First pass: find a card with an Attack/AttackAoE action that has valid targets
+        // First pass: find a card with a damage action that has valid targets
         foreach (var card in _cards)
         {
             if (!card.IsReady || card.ActionCount == 0) continue;
@@ -69,8 +76,7 @@ public class EnemyUnit : Unit
             {
                 var action = card.GetAction(i);
                 var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
-                if (targets.Count > 0 &&
-                    (action.effect == CardEffect.Attack || action.effect == CardEffect.AttackAoE))
+                if (targets.Count > 0 && IsDamageEffect(action.effect))
                 {
                     canDealDamage = true;
                     break;
@@ -130,6 +136,15 @@ public class EnemyUnit : Unit
                 continue;
             }
 
+            // Auto-resolve ReduceCooldown (no visible target needed)
+            if (action.effect == CardEffect.ReduceCooldown)
+            {
+                Debug.Log($"  {DisplayName} resolves {Hand.DescribeAction(action)}.");
+                chosenCard.ResolveAction(i, this, allUnits, Grid, Coord);
+                yield return new WaitForSeconds(DelayAfterResolve);
+                continue;
+            }
+
             // Highlight all valid targets
             HighlightCoords(targets, true);
             yield return new WaitForSeconds(DelayShowTargets);
@@ -150,6 +165,32 @@ public class EnemyUnit : Unit
 
             // Clear chosen highlight
             HighlightCoord(best, false);
+
+            // Multi-target: resolve on additional targets
+            if (action.maxTargets > 1)
+            {
+                var hitSet = new HashSet<HexCoord> { best };
+                for (int mt = 1; mt < action.maxTargets; mt++)
+                {
+                    allUnits = _turnManager.GetAliveUnits();
+                    var remaining = chosenCard.GetValidTargetsForAction(i, this, allUnits, Grid);
+                    // Filter out already-hit
+                    remaining.RemoveAll(c => hitSet.Contains(c));
+                    if (remaining.Count == 0) break;
+
+                    yield return new WaitForSeconds(DelayShowTargets);
+                    HexCoord nextBest = PickBestTarget(remaining, primaryTarget);
+                    HighlightCoord(nextBest, true);
+                    yield return new WaitForSeconds(DelayShowTargets);
+
+                    Debug.Log($"  {DisplayName} resolves {Hand.DescribeAction(action)} at {nextBest} (multi-target).");
+                    chosenCard.ResolveAction(i, this, allUnits, Grid, nextBest);
+                    TriggerStatuses(StatusTrigger.OnAction);
+                    HighlightCoord(nextBest, false);
+                    hitSet.Add(nextBest);
+                }
+            }
+
             yield return new WaitForSeconds(DelayAfterResolve);
         }
 
@@ -159,6 +200,13 @@ public class EnemyUnit : Unit
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    private static bool IsDamageEffect(CardEffect effect)
+    {
+        return effect == CardEffect.Attack
+            || effect == CardEffect.AttackAoE
+            || effect == CardEffect.AttackLine;
+    }
 
     private Unit FindPrimaryTarget(List<Unit> allUnits)
     {

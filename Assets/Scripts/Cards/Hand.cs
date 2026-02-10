@@ -48,18 +48,46 @@ public class Hand
         return string.Join(" > ", parts);
     }
 
+    /// <summary>
+    /// Reduce cooldown on a specific card by amount.
+    /// </summary>
+    public void ReduceCardCooldown(int cardIndex, int amount)
+    {
+        if (cardIndex >= 0 && cardIndex < _cards.Count)
+            _cards[cardIndex].ReduceCooldown(amount);
+    }
+
     public static string DescribeAction(CardAction action)
     {
+        string statusSuffix = "";
+        bool isAttackWithStatus = action.statusStacks > 0 &&
+            (action.effect == CardEffect.Attack || action.effect == CardEffect.AttackLine);
+        if (isAttackWithStatus)
+        {
+            var sDef = StatusEffectDefs.Get(action.statusEffect);
+            statusSuffix = $" + {sDef.Name} {action.statusStacks}";
+        }
+
+        string multiSuffix = action.maxTargets > 1 ? $" x{action.maxTargets}" : "";
+        string bonusSuffix = action.bonusDamageAtMaxRange
+            ? $" ({action.damage + action.bonusDamage} at max)"
+            : "";
+
         switch (action.effect)
         {
             case CardEffect.Move:      return $"Move {action.range}";
             case CardEffect.Dash:      return $"Dash {action.range}";
-            case CardEffect.Attack:    return $"Atk {action.damage} Rng {action.range}";
+            case CardEffect.Attack:
+                return $"Atk {action.damage} Rng {action.range}{statusSuffix}{multiSuffix}{bonusSuffix}";
+            case CardEffect.AttackLine:
+                return $"Line {action.damage} Rng {action.range}{statusSuffix}";
             case CardEffect.Push:      return $"Push {action.pushDistance} Rng {action.range}";
             case CardEffect.Pull:      return $"Pull {action.pushDistance} Rng {action.range}";
+            case CardEffect.PushAoE:   return $"Push All {action.pushDistance} Rng {action.range}";
             case CardEffect.Heal:      return $"Heal {action.damage}";
             case CardEffect.Jump:      return $"Jump {action.range}";
             case CardEffect.AttackAoE: return $"AoE {action.damage} Rng {action.range}";
+            case CardEffect.ReduceCooldown: return $"Haste -1 CD";
             case CardEffect.Status:
                 var def = StatusEffectDefs.Get(action.statusEffect);
                 string self = action.targetSelf ? " (self)" : "";

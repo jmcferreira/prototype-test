@@ -17,7 +17,17 @@ public class CardInstance
     public CardInstance(CardData data)
     {
         Data = data;
-        CooldownRemaining = 0;
+        CooldownRemaining = data.startCooldown > 0 ? data.startCooldown : 0;
+    }
+
+    /// <summary>
+    /// Reduce the cooldown by the given amount (floor 0).
+    /// Used by ReduceCooldown card effects.
+    /// </summary>
+    public void ReduceCooldown(int amount)
+    {
+        CooldownRemaining = Mathf.Max(0, CooldownRemaining - amount);
+        Debug.Log($"[{Data.cardName}] cooldown reduced by {amount}: {CooldownRemaining} turns left.");
     }
 
     public CardAction GetAction(int index)

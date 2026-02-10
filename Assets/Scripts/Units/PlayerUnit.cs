@@ -5,6 +5,7 @@ using UnityEngine;
 /// Player-controlled unit. States:
 ///   Idle         → click a card in the HandUI, or click Pass
 ///   CardSelected → step through each action: pick target or skip, then advance
+/// Supports multi-target attacks, auto-resolve effects, and ReduceCooldown.
 /// </summary>
 public class PlayerUnit : Unit
 {
@@ -22,6 +23,10 @@ public class PlayerUnit : Unit
     private HexInteraction _hexInteraction;
     private TurnManager _turnManager;
     private HandUI _handUI;
+
+    // Multi-target tracking
+    private int _multiTargetRemaining;
+    private HashSet<HexCoord> _multiTargetExclude = new();
 
     public void InitHand(CardData[] cardDatas)
     {
@@ -65,6 +70,12 @@ public class PlayerUnit : Unit
         _handUI?.HideActionStep();
         _state = State.Inactive;
         base.OnTurnEnd(); // Poison damage + status decay
+    }
+
+    public override void ReduceCardCooldown(int cardIndex, int amount)
+    {
+        Hand?.ReduceCardCooldown(cardIndex, amount);
+        _handUI?.Refresh(Hand);
     }
 
     private void Update()
@@ -116,6 +127,20 @@ public class PlayerUnit : Unit
     private void HandleSkipClicked()
     {
         if (_state != State.CardSelected) return;
+
+        // If in multi-target mode, skip ends the remaining hits
+        if (_multiTargetRemaining > 0)
+        {
+            Debug.Log($"  Skipped remaining multi-target hits.");
+            ClearTargetHover();
+            ClearHighlights();
+            _multiTargetRemaining = 0;
+            _multiTargetExclude.Clear();
+            _currentActionIndex++;
+            ShowCurrentAction();
+            return;
+        }
+
         var action = _selectedCard.GetAction(_currentActionIndex);
         if (action.mandatory) return; // can't skip mandatory actions
         SkipCurrentAction();
@@ -128,6 +153,8 @@ public class PlayerUnit : Unit
         _selectedCard = card;
         _selectedCardIndex = index;
         _currentActionIndex = 0;
+        _multiTargetRemaining = 0;
+        _multiTargetExclude.Clear();
         _handUI?.SetSelectedCard(index);
         _handUI?.ShowExpandedCard(card.Data);
         _state = State.CardSelected;
@@ -137,7 +164,7 @@ public class PlayerUnit : Unit
 
     /// <summary>
     /// Show valid targets for the current action. Auto-skips if none available.
-    /// Auto-resolves self-targeting status effects.
+    /// Auto-resolves self-targeting status effects, ReduceCooldown, and PushAoE.
     /// </summary>
     private void ShowCurrentAction()
     {
@@ -174,16 +201,59 @@ public class PlayerUnit : Unit
             return;
         }
 
+        // Auto-resolve ReduceCooldown (no click needed)
+        if (action.effect == CardEffect.ReduceCooldown)
+        {
+            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                      $"{Hand.DescribeAction(action)} — auto-resolving.");
+            _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, Coord);
+            _currentActionIndex++;
+            ShowCurrentAction();
+            return;
+        }
+
+        // Set up multi-target if needed (first entry into this action)
+        if (_multiTargetRemaining == 0 && action.maxTargets > 1)
+        {
+            _multiTargetRemaining = action.maxTargets;
+            _multiTargetExclude.Clear();
+        }
+
+        // Filter out already-hit targets for multi-target
+        if (_multiTargetRemaining > 0 && _multiTargetExclude.Count > 0)
+        {
+            var filtered = new List<HexCoord>();
+            foreach (var t in targets)
+            {
+                if (!_multiTargetExclude.Contains(t))
+                    filtered.Add(t);
+            }
+            targets = filtered;
+
+            if (targets.Count == 0)
+            {
+                Debug.Log($"  No more valid targets for multi-target.");
+                _multiTargetRemaining = 0;
+                _multiTargetExclude.Clear();
+                _currentActionIndex++;
+                ShowCurrentAction();
+                return;
+            }
+        }
+
         _validTargets = targets;
         _validTargetSet = new HashSet<HexCoord>(targets);
         _hoveredTargetTile = null;
         HighlightTargets(true);
 
         string desc = Hand.DescribeAction(action);
-        bool canSkip = !action.mandatory;
-        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc, canSkip);
+        bool canSkip = !action.mandatory || _multiTargetRemaining > 0;
+        string multiHint = _multiTargetRemaining > 0
+            ? $" [target {action.maxTargets - _multiTargetRemaining + 1}/{action.maxTargets}]"
+            : "";
+        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc + multiHint, canSkip);
         string hint = canSkip ? "click a target or skip" : "click a target (mandatory)";
-        Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc} — {hint}.");
+        Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc}{multiHint} — {hint}.");
     }
 
     private void UpdateCardSelected()
@@ -205,12 +275,32 @@ public class PlayerUnit : Unit
         HexCoord clicked = tileUnderMouse.Coord;
         if (!_validTargetSet.Contains(clicked)) return;
 
-        // Resolve this action and advance
+        // Resolve this action
         ClearTargetHover();
         ClearHighlights();
         var allUnits = _turnManager.GetAliveUnits();
         _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, clicked);
         TriggerStatuses(StatusTrigger.OnAction); // Burn etc.
+
+        // Multi-target: resolve one hit, continue if more remain
+        if (_multiTargetRemaining > 0)
+        {
+            _multiTargetRemaining--;
+            _multiTargetExclude.Add(clicked);
+
+            if (_multiTargetRemaining > 0)
+            {
+                // Show remaining targets for next hit
+                ShowCurrentAction();
+                return;
+            }
+            else
+            {
+                // All hits done
+                _multiTargetExclude.Clear();
+            }
+        }
+
         _currentActionIndex++;
         ShowCurrentAction();
     }
@@ -234,6 +324,8 @@ public class PlayerUnit : Unit
         _selectedCard = null;
         _selectedCardIndex = -1;
         _validTargetSet = null;
+        _multiTargetRemaining = 0;
+        _multiTargetExclude.Clear();
         _handUI?.SetSelectedCard(-1);
         _handUI?.HideActionStep();
         _handUI?.Refresh(Hand);
@@ -247,6 +339,8 @@ public class PlayerUnit : Unit
         _selectedCard = null;
         _selectedCardIndex = -1;
         _validTargetSet = null;
+        _multiTargetRemaining = 0;
+        _multiTargetExclude.Clear();
         Debug.Log("Card cancelled.");
         EnterIdle();
     }

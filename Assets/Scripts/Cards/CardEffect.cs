@@ -12,4 +12,7 @@ public enum CardEffect
     Status,
     Jump,
     AttackAoE,
+    AttackLine,
+    PushAoE,
+    ReduceCooldown,
 }

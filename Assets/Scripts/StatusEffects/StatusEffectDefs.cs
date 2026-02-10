@@ -93,6 +93,19 @@ public static class StatusEffectDefs
                 BlocksAttackTargeting = false,
             }
         },
+        {
+            StatusEffectType.Root, new Def
+            {
+                Name = "Root",
+                Icon = "\u2A02",                            // ⊗ cross-circle
+                IconColor = new Color(0.55f, 0.35f, 0.15f), // brown
+                MaxStacks = 3,
+                DamageTrigger = StatusTrigger.None,
+                DamagePerStack = 0,
+                DecayPerTurn = 1,
+                BlocksAttackTargeting = false,
+            }
+        },
     };
     // ────────────────────────────────────────────────────────────────────
 

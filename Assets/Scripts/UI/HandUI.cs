@@ -95,7 +95,7 @@ public class HandUI : MonoBehaviour
         panelRect.anchoredPosition = new Vector2(0f, 15f);
 
         var layout = panelGo.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = -20;
+        layout.spacing = -60;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;

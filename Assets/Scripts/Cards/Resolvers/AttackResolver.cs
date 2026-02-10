@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Attack: deal card.damage to a single enemy unit within card.range hex distance.
-/// Checks all enemy-team units for valid targets.
+/// Supports optional status-on-hit and max-range bonus damage.
+/// Multi-target is handled by the unit flow calling Resolve multiple times.
 /// </summary>
 public class AttackResolver : ICardResolver
 {
@@ -29,8 +30,21 @@ public class AttackResolver : ICardResolver
         {
             if (unit.Coord == target && unit != caster && unit.IsAlive)
             {
-                unit.TakeHit(action.damage);
-                Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {action.damage} damage.");
+                // Calculate damage with optional max-range bonus
+                int dmg = action.damage;
+                if (action.bonusDamageAtMaxRange && caster.Coord.DistanceTo(target) >= action.range)
+                    dmg += action.bonusDamage;
+
+                unit.TakeHit(dmg);
+                Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage.");
+
+                // Apply status-on-hit if configured
+                if (action.statusStacks > 0)
+                {
+                    unit.ApplyStatus(action.statusEffect, action.statusStacks);
+                    var def = StatusEffectDefs.Get(action.statusEffect);
+                    Debug.Log($"Attack: applied {action.statusStacks} {def.Name} to {unit.DisplayName}.");
+                }
                 break;
             }
         }

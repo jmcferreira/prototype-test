@@ -265,6 +265,11 @@ public abstract class Unit : MonoBehaviour
         transform.position = coord.ToWorldPosition(_hexSize) + Vector3.up * 0.1f;
     }
 
+    /// <summary>
+    /// Reduce cooldown on a specific card. Override in subclasses that have hands.
+    /// </summary>
+    public virtual void ReduceCardCooldown(int cardIndex, int amount) { }
+
     /// <summary>Called by TurnManager when this unit's turn begins.</summary>
     public virtual void OnTurnStart() { }
 

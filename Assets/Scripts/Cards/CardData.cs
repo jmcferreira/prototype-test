@@ -13,6 +13,9 @@ public class CardData : ScriptableObject
     [Tooltip("Ordered list of actions — resolved top to bottom, each can be skipped")]
     public CardAction[] actions;
 
-    [Tooltip("Cooldown in turns after being played (1–5)")]
-    [Range(1, 5)] public int cooldown = 1;
+    [Tooltip("Cooldown in turns after being played (0 = no cooldown)")]
+    [Min(0)] public int cooldown = 1;
+
+    [Tooltip("If > 0, the card starts the game on this many turns of cooldown")]
+    [Min(0)] public int startCooldown = 0;
 }

@@ -10,6 +10,10 @@ public class MoveResolver : ICardResolver
 {
     public List<HexCoord> GetValidTargets(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid)
     {
+        // Root prevents all movement
+        if (caster.HasStatus(StatusEffectType.Root))
+            return new List<HexCoord>();
+
         int bonusRange = caster.GetStatusStacks(StatusEffectType.Swift);
         int totalRange = action.range + bonusRange;
 
