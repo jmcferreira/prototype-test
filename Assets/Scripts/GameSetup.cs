@@ -65,6 +65,10 @@ public class GameSetup : MonoBehaviour
         enemy.SetTurnManager(turnManager);
         turnManager.Begin(player, enemy);
 
+        // Camera controls (zoom + pan)
+        if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
+            Camera.main.gameObject.AddComponent<CameraController>();
+
         Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
     }
 
