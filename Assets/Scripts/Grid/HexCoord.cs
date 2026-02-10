@@ -34,6 +34,34 @@ public struct HexCoord : IEquatable<HexCoord>
     }
 
     /// <summary>
+    /// Converts a world position (XZ plane) back to the nearest axial hex coordinate.
+    /// Inverse of ToWorldPosition. Uses cube-coordinate rounding.
+    /// </summary>
+    public static HexCoord FromWorldPosition(Vector3 worldPos, float hexSize = 1f)
+    {
+        // Inverse of flat-top hex:
+        float q = (2f / 3f * worldPos.x) / hexSize;
+        float r = (-1f / 3f * worldPos.x + Mathf.Sqrt(3f) / 3f * worldPos.z) / hexSize;
+
+        // Cube round
+        float s = -q - r;
+        int rq = Mathf.RoundToInt(q);
+        int rr = Mathf.RoundToInt(r);
+        int rs = Mathf.RoundToInt(s);
+
+        float dq = Mathf.Abs(rq - q);
+        float dr = Mathf.Abs(rr - r);
+        float ds = Mathf.Abs(rs - s);
+
+        if (dq > dr && dq > ds)
+            rq = -rr - rs;
+        else if (dr > ds)
+            rr = -rq - rs;
+
+        return new HexCoord(rq, rr);
+    }
+
+    /// <summary>
     /// Manhattan distance on the hex grid (cube-based).
     /// </summary>
     public int DistanceTo(HexCoord other)

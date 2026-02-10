@@ -19,24 +19,21 @@ public class GameSetup : MonoBehaviour
 
     private void Setup()
     {
-        float size = hexGrid.HexSize;
-
-        // Place player near bottom-left, enemy near top-right
         var playerCoord = new HexCoord(1, 1);
         var enemyCoord = new HexCoord(5, 1);
 
         var playerGo = new GameObject();
-        var player = playerGo.AddComponent<Unit>();
-        player.Init(Team.Player, playerCoord, size);
+        var player = playerGo.AddComponent<PlayerUnit>();
+        player.Init(Team.Player, playerCoord, hexGrid);
 
         var enemyGo = new GameObject();
-        var enemy = enemyGo.AddComponent<Unit>();
-        enemy.Init(Team.Enemy, enemyCoord, size);
+        var enemy = enemyGo.AddComponent<EnemyUnit>();
+        enemy.Init(Team.Enemy, enemyCoord, hexGrid);
 
         // Create and start turn manager
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
-        turnManager.Begin();
+        turnManager.Begin(player, enemy);
 
         Debug.Log($"Player placed at {playerCoord}, Enemy placed at {enemyCoord}");
     }
