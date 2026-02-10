@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -22,6 +23,14 @@ public class HandUI : MonoBehaviour
     /// </summary>
     public void Init(Hand hand)
     {
+        // EventSystem is required for UI clicks to work
+        if (FindObjectOfType<EventSystem>() == null)
+        {
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<EventSystem>();
+            esGo.AddComponent<StandaloneInputModule>();
+        }
+
         // Screen-space overlay canvas
         _canvas = gameObject.AddComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -29,7 +38,21 @@ public class HandUI : MonoBehaviour
         gameObject.AddComponent<CanvasScaler>();
         gameObject.AddComponent<GraphicRaycaster>();
 
-        // Bottom-center panel
+        // Dark background strip across the bottom
+        var bgGo = new GameObject("Background");
+        bgGo.transform.SetParent(transform, false);
+        var bgImage = bgGo.AddComponent<Image>();
+        bgImage.color = new Color(0.12f, 0.12f, 0.15f, 0.9f);
+        bgImage.raycastTarget = false;
+
+        var bgRect = bgGo.GetComponent<RectTransform>();
+        bgRect.anchorMin = new Vector2(0f, 0f);
+        bgRect.anchorMax = new Vector2(1f, 0f);
+        bgRect.pivot = new Vector2(0.5f, 0f);
+        bgRect.anchoredPosition = Vector2.zero;
+        bgRect.sizeDelta = new Vector2(0f, 90f);
+
+        // Card row — centered on the background strip
         var panelGo = new GameObject("CardPanel");
         panelGo.transform.SetParent(transform, false);
         var panelRect = panelGo.AddComponent<RectTransform>();
