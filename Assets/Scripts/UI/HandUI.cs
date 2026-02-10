@@ -112,11 +112,11 @@ public class HandUI : MonoBehaviour
 
             var cardRect = cardGo.AddComponent<RectTransform>();
             var le = cardGo.AddComponent<LayoutElement>();
-            le.preferredWidth = 240;
-            le.preferredHeight = 160;
+            le.preferredWidth = 200;
+            le.preferredHeight = 210;
 
             var cardUI = cardGo.AddComponent<CardUI>();
-            cardUI.Build();
+            cardUI.Build(hand.Cards[i].Data);
 
             int index = i; // capture for closure
             cardUI.OnClicked += () => OnCardClicked?.Invoke(index);
@@ -231,13 +231,7 @@ public class HandUI : MonoBehaviour
         for (int i = 0; i < _cardUIs.Count && i < hand.Cards.Count; i++)
         {
             var card = hand.Cards[i];
-            _cardUIs[i].Refresh(
-                card.Data.cardName,
-                Hand.DescribeActions(card.Data),
-                card.CooldownRemaining,
-                card.Data.cooldown,
-                card.IsReady
-            );
+            _cardUIs[i].Refresh(card.CooldownRemaining, card.Data.cooldown, card.IsReady);
         }
     }
 
