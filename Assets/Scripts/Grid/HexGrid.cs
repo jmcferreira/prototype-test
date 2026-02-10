@@ -82,8 +82,10 @@ public class HexGrid : MonoBehaviour
         var max = new HexCoord(qMax, rMax).ToWorldPosition(hexSize);
 
         var center = (min + max) / 2f;
-        Camera.main.transform.position = new Vector3(center.x, center.y, -10f);
+        // Camera looks straight down at the XZ ground plane
+        Camera.main.transform.position = new Vector3(center.x, 15f, center.z);
+        Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         Camera.main.orthographic = true;
-        Camera.main.orthographicSize = Mathf.Max(max.y - min.y, max.x - min.x) / 2f + 2f;
+        Camera.main.orthographicSize = Mathf.Max(max.z - min.z, max.x - min.x) / 2f + 2f;
     }
 }

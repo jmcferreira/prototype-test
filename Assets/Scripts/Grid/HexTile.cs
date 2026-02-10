@@ -51,7 +51,7 @@ public class HexTile : MonoBehaviour
         {
             float angleDeg = 60f * i;
             float angleRad = Mathf.Deg2Rad * angleDeg;
-            verts[i + 1] = new Vector3(r * Mathf.Cos(angleRad), r * Mathf.Sin(angleRad), 0f);
+            verts[i + 1] = new Vector3(r * Mathf.Cos(angleRad), 0f, r * Mathf.Sin(angleRad));
         }
 
         for (int i = 0; i < 6; i++)

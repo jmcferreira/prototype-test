@@ -25,12 +25,12 @@ public struct HexCoord : IEquatable<HexCoord>
     /// </summary>
     public Vector3 ToWorldPosition(float hexSize = 1f)
     {
-        // Flat-top hex:
+        // Flat-top hex on the XZ ground plane:
         //   x = size * (3/2 * q)
-        //   y = size * (sqrt(3)/2 * q + sqrt(3) * r)
+        //   z = size * (sqrt(3)/2 * q + sqrt(3) * r)
         float x = hexSize * (1.5f * q);
-        float y = hexSize * (Mathf.Sqrt(3f) / 2f * q + Mathf.Sqrt(3f) * r);
-        return new Vector3(x, y, 0f);
+        float z = hexSize * (Mathf.Sqrt(3f) / 2f * q + Mathf.Sqrt(3f) * r);
+        return new Vector3(x, 0f, z);
     }
 
     /// <summary>
