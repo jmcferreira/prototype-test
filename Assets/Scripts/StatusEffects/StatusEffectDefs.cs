@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// Data-driven registry of all status effect behaviours.
@@ -15,8 +16,11 @@ public static class StatusEffectDefs
         /// <summary>Display name shown in UI and logs.</summary>
         public string Name;
 
-        /// <summary>Short icon/letter shown on the unit label.</summary>
+        /// <summary>Unicode character used as icon on the unit info panel.</summary>
         public string Icon;
+
+        /// <summary>Color of the icon on the unit info panel.</summary>
+        public Color IconColor;
 
         /// <summary>Maximum number of stacks that can accumulate.</summary>
         public int MaxStacks;
@@ -41,11 +45,12 @@ public static class StatusEffectDefs
             StatusEffectType.Burn, new Def
             {
                 Name = "Burn",
-                Icon = "B",
+                Icon = "\u25B2",                            // ▲ flame-like triangle
+                IconColor = new Color(1f, 0.5f, 0f),       // orange
                 MaxStacks = 3,
                 DamageTrigger = StatusTrigger.OnAction,
                 DamagePerStack = 1,
-                DecayPerTurn = 0,           // permanent until cleansed
+                DecayPerTurn = 0,
                 BlocksAttackTargeting = false,
             }
         },
@@ -53,11 +58,12 @@ public static class StatusEffectDefs
             StatusEffectType.Poison, new Def
             {
                 Name = "Poison",
-                Icon = "P",
+                Icon = "\u25CF",                            // ● droplet-like circle
+                IconColor = new Color(0.2f, 0.85f, 0.2f),  // green
                 MaxStacks = 5,
                 DamageTrigger = StatusTrigger.OnTurnEnd,
                 DamagePerStack = 1,
-                DecayPerTurn = 1,           // loses 1 stack per turn
+                DecayPerTurn = 1,
                 BlocksAttackTargeting = false,
             }
         },
@@ -65,11 +71,12 @@ public static class StatusEffectDefs
             StatusEffectType.Blind, new Def
             {
                 Name = "Blind",
-                Icon = "X",
+                Icon = "\u25C9",                            // ◉ eye-like fisheye
+                IconColor = new Color(0.7f, 0.5f, 0.9f),   // purple
                 MaxStacks = 1,
                 DamageTrigger = StatusTrigger.None,
                 DamagePerStack = 0,
-                DecayPerTurn = 1,           // wears off after 1 turn
+                DecayPerTurn = 1,
                 BlocksAttackTargeting = true,
             }
         },
