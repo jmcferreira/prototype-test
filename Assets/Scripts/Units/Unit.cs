@@ -10,25 +10,28 @@ public abstract class Unit : MonoBehaviour
 {
     public Team Team { get; private set; }
     public HexCoord Coord { get; private set; }
+    public string DisplayName { get; private set; }
     public int HP { get; private set; } = 3;
     public int MaxHP { get; private set; } = 3;
     public bool IsAlive => HP > 0;
 
     private HexGrid _grid;
     private float _hexSize;
+    private TextMesh _nameText;
     private TextMesh _hpText;
 
     // --- Status effects ---
     private readonly Dictionary<StatusEffectType, int> _statuses = new();
 
-    public void Init(Team team, HexCoord startCoord, HexGrid grid)
+    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null)
     {
         Team = team;
+        DisplayName = displayName ?? team.ToString();
         _grid = grid;
         _hexSize = grid.HexSize;
         Coord = startCoord;
         PlaceAt(startCoord);
-        gameObject.name = $"{team} Unit";
+        gameObject.name = DisplayName;
 
         // Simple colored cube so we can tell them apart
         var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -40,19 +43,8 @@ public abstract class Unit : MonoBehaviour
         mat.color = team == Team.Player ? Color.blue : Color.red;
         cube.GetComponent<MeshRenderer>().material = mat;
 
-        // HP label floating above the unit
-        var textGo = new GameObject("HP Label");
-        textGo.transform.SetParent(transform);
-        textGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
-        // Rotate to face the top-down camera (text on XZ plane, readable from Y+)
-        textGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        _hpText = textGo.AddComponent<TextMesh>();
-        _hpText.characterSize = 0.2f;
-        _hpText.fontSize = 48;
-        _hpText.anchor = TextAnchor.MiddleCenter;
-        _hpText.alignment = TextAlignment.Center;
-        _hpText.color = Color.white;
-        UpdateHPLabel();
+        BuildInfoPanel();
+        UpdateLabel();
     }
 
     /// <summary>
@@ -166,9 +158,52 @@ public abstract class Unit : MonoBehaviour
         UpdateLabel();
     }
 
-    /// <summary>
-    /// Build a short string of active statuses for the unit label.
-    /// </summary>
+    // --- Info panel (name + HP box beneath the unit) ---
+
+    private void BuildInfoPanel()
+    {
+        // Panel sits below the unit on screen (−Z in world = down on screen)
+        var panelGo = new GameObject("InfoPanel");
+        panelGo.transform.SetParent(transform);
+        panelGo.transform.localPosition = new Vector3(0f, 0.15f, -0.6f);
+        // Lie flat on XZ plane, readable from the top-down camera
+        panelGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+        // Background — thin cube so it renders from any angle
+        var bg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        bg.transform.SetParent(panelGo.transform, false);
+        bg.transform.localPosition = new Vector3(0f, 0f, 0.01f);
+        bg.transform.localScale = new Vector3(1.1f, 0.38f, 0.02f);
+        Object.Destroy(bg.GetComponent<BoxCollider>());
+        var bgMat = new Material(Shader.Find("Unlit/Color"));
+        bgMat.color = new Color(0.1f, 0.1f, 0.12f, 1f);
+        bg.GetComponent<MeshRenderer>().material = bgMat;
+
+        // Name text (upper half of panel)
+        var nameGo = new GameObject("NameLabel");
+        nameGo.transform.SetParent(panelGo.transform, false);
+        nameGo.transform.localPosition = new Vector3(0f, 0.065f, 0f);
+        _nameText = nameGo.AddComponent<TextMesh>();
+        _nameText.characterSize = 0.12f;
+        _nameText.fontSize = 48;
+        _nameText.fontStyle = FontStyle.Bold;
+        _nameText.anchor = TextAnchor.MiddleCenter;
+        _nameText.alignment = TextAlignment.Center;
+        _nameText.color = Color.white;
+        _nameText.text = DisplayName;
+
+        // HP + status text (lower half of panel)
+        var hpGo = new GameObject("HPLabel");
+        hpGo.transform.SetParent(panelGo.transform, false);
+        hpGo.transform.localPosition = new Vector3(0f, -0.065f, 0f);
+        _hpText = hpGo.AddComponent<TextMesh>();
+        _hpText.characterSize = 0.12f;
+        _hpText.fontSize = 40;
+        _hpText.anchor = TextAnchor.MiddleCenter;
+        _hpText.alignment = TextAlignment.Center;
+        _hpText.color = new Color(1f, 0.85f, 0.85f);
+    }
+
     private string StatusLabel()
     {
         var parts = new List<string>();
@@ -183,6 +218,8 @@ public abstract class Unit : MonoBehaviour
 
     private void UpdateLabel()
     {
+        if (_nameText != null)
+            _nameText.text = DisplayName;
         if (_hpText != null)
         {
             string hearts = new string('\u2665', Mathf.Max(0, HP));

@@ -29,7 +29,7 @@ public class GameSetup : MonoBehaviour
 
         var playerGo = new GameObject();
         var player = playerGo.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, playerCoord, hexGrid);
+        player.Init(Team.Player, playerCoord, hexGrid, "Player 1");
 
         // Load from Inspector or fall back to Resources/Cards
         if (playerCards == null || playerCards.Length == 0)
@@ -43,7 +43,7 @@ public class GameSetup : MonoBehaviour
 
         var enemyGo = new GameObject();
         var enemy = enemyGo.AddComponent<EnemyUnit>();
-        enemy.Init(Team.Enemy, enemyCoord, hexGrid);
+        enemy.Init(Team.Enemy, enemyCoord, hexGrid, "Spider");
         enemy.InitCards(enemyCards);
         enemy.SetPlayer(player);
 
