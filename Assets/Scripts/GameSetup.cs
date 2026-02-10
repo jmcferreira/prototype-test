@@ -31,11 +31,12 @@ public class GameSetup : MonoBehaviour
         if (starterCards == null || starterCards.Length == 0)
             starterCards = CreateDefaultCards();
 
-        player.InitHand(starterCards);
-
         var enemyGo = new GameObject();
         var enemy = enemyGo.AddComponent<EnemyUnit>();
         enemy.Init(Team.Enemy, enemyCoord, hexGrid);
+
+        player.InitHand(starterCards);
+        player.SetEnemy(enemy);
 
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();

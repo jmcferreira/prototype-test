@@ -9,6 +9,8 @@ public abstract class Unit : MonoBehaviour
 {
     public Team Team { get; private set; }
     public HexCoord Coord { get; private set; }
+    public int HP { get; private set; } = 3;
+    public bool IsAlive => HP > 0;
 
     private HexGrid _grid;
     private float _hexSize;
@@ -56,6 +58,26 @@ public abstract class Unit : MonoBehaviour
         }
         return false;
     }
+
+    /// <summary>
+    /// Unconditionally move this unit to a hex (used by card effects like push/pull/dash).
+    /// </summary>
+    public void ForceMoveTo(HexCoord target)
+    {
+        Coord = target;
+        PlaceAt(target);
+    }
+
+    /// <summary>
+    /// Take damage. Logs HP remaining.
+    /// </summary>
+    public void TakeHit(int damage)
+    {
+        HP -= damage;
+        Debug.Log($"{Team} took {damage} damage — HP: {HP}");
+    }
+
+    public HexGrid Grid => _grid;
 
     private void PlaceAt(HexCoord coord)
     {

@@ -34,6 +34,14 @@ public class CardInstance
     }
 
     /// <summary>
+    /// Refund the cooldown (e.g. if the effect failed or was cancelled).
+    /// </summary>
+    public void ResetCooldown()
+    {
+        CooldownRemaining = 0;
+    }
+
+    /// <summary>
     /// Tick cooldown down by 1. Called at the start of the owning player's turn.
     /// </summary>
     public void TickCooldown()

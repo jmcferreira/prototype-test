@@ -1,89 +1,121 @@
 using UnityEngine;
 
 /// <summary>
-/// Player-controlled unit. During their turn, click an adjacent hex to move,
-/// or press 1–4 to play a card (effect execution not implemented yet).
+/// Player-controlled unit. Keyboard-only card flow:
+///   1–4: select a card
+///   For Move: Q/W/E/A/S/D to pick hex direction (E/NE/NW/W/SW/SE)
+///   For Attack/Push/Pull: auto-targets the enemy
+///   Space: end turn without playing a card
+///   Escape: cancel card selection
 /// </summary>
 public class PlayerUnit : Unit
 {
     public Hand Hand { get; private set; }
 
     private bool _canAct;
-    private bool _cardPlayed;
-    private Camera _cam;
-
-    private void Awake()
-    {
-        _cam = Camera.main;
-    }
+    private CardInstance _selectedCard;
+    private Unit _enemy;
 
     public void InitHand(CardData[] cardDatas)
     {
         Hand = new Hand(cardDatas);
     }
 
+    public void SetEnemy(Unit enemy)
+    {
+        _enemy = enemy;
+    }
+
     public override void OnTurnStart()
     {
         _canAct = true;
-        _cardPlayed = false;
+        _selectedCard = null;
 
         Hand?.TickCooldowns();
         Debug.Log("--- Your hand ---");
         Hand?.LogHand();
-        Debug.Log("Click adjacent hex to move, 1-4 to play a card, Space to end turn.");
+        Debug.Log("Press 1-4 to play a card, Space to end turn.");
     }
 
     public override void OnTurnEnd()
     {
         _canAct = false;
+        _selectedCard = null;
     }
 
     private void Update()
     {
         if (!_canAct) return;
 
-        HandleCardInput();
-        HandleMoveInput();
-    }
-
-    private void HandleCardInput()
-    {
-        if (_cardPlayed) return;
-
-        // Keys 1–4 map to card indices 0–3
-        for (int i = 0; i < 4; i++)
+        if (_selectedCard != null)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
-            {
-                var played = Hand?.TryPlay(i);
-                if (played != null)
-                {
-                    _cardPlayed = true;
-                    Debug.Log($"Card effect: {played.Data.effect} (execution not wired yet)");
-                }
-                break;
-            }
-        }
-    }
-
-    private void HandleMoveInput()
-    {
-        if (!Input.GetMouseButtonDown(0)) return;
-
-        var ray = _cam.ScreenPointToRay(Input.mousePosition);
-        var plane = new Plane(Vector3.up, Vector3.zero);
-        if (!plane.Raycast(ray, out float enter)) return;
-
-        Vector3 worldPoint = ray.GetPoint(enter);
-        HexCoord clicked = HexCoord.FromWorldPosition(worldPoint);
-
-        if (TryMoveTo(clicked))
-        {
-            _canAct = false; // one move per turn
+            HandleTargeting();
         }
         else
         {
-            Debug.Log($"Can't move to {clicked} — must be an adjacent tile.");
+            HandleCardSelection();
         }
+    }
+
+    private void HandleCardSelection()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (!Input.GetKeyDown(KeyCode.Alpha1 + i)) continue;
+
+            var card = Hand?.TryPlay(i);
+            if (card == null) break;
+
+            if (card.Data.effect == CardEffect.Move)
+            {
+                _selectedCard = card;
+                Debug.Log($"[{card.Data.cardName}] selected — pick direction: Q=E, W=NE, E=NW, A=W, S=SW, D=SE");
+            }
+            else
+            {
+                // Auto-target the enemy for Attack/Push/Pull
+                bool success = CardEffectExecutor.Execute(card, this, _enemy, Grid);
+                if (!success)
+                {
+                    card.ResetCooldown();
+                    Debug.Log("Effect failed — card cooldown refunded.");
+                }
+                _canAct = false;
+            }
+            break;
+        }
+    }
+
+    private void HandleTargeting()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            _selectedCard.ResetCooldown();
+            _selectedCard = null;
+            Debug.Log("Card cancelled — cooldown refunded.");
+            Debug.Log("Press 1-4 to play a card, Space to end turn.");
+            return;
+        }
+
+        // Direction keys: Q=E(0), W=NE(1), E=NW(2), A=W(3), S=SW(4), D=SE(5)
+        int dir = -1;
+        if (Input.GetKeyDown(KeyCode.Q)) dir = 0;
+        else if (Input.GetKeyDown(KeyCode.W)) dir = 1;
+        else if (Input.GetKeyDown(KeyCode.E)) dir = 2;
+        else if (Input.GetKeyDown(KeyCode.A)) dir = 3;
+        else if (Input.GetKeyDown(KeyCode.S)) dir = 4;
+        else if (Input.GetKeyDown(KeyCode.D)) dir = 5;
+
+        if (dir < 0) return;
+
+        bool success = CardEffectExecutor.ExecuteMove(_selectedCard.Data, this, Grid, dir);
+        if (!success)
+        {
+            _selectedCard.ResetCooldown();
+            Debug.Log("Move failed — card cooldown refunded.");
+        }
+
+        _selectedCard = null;
+        _canAct = false;
     }
 }
