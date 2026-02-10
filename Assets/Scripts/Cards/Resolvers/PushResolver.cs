@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Push: shove the enemy 1 hex away from the caster.
-/// Valid target is the enemy's hex (if in range and push destination is open).
+/// Push: shove the enemy N hexes away from the caster (data.pushDistance).
+/// Valid target is the enemy's hex if within data.range and at least 1 hex
+/// of push space exists. Stops early at grid edge or occupied tiles.
 /// </summary>
 public class PushResolver : ICardResolver
 {
@@ -14,23 +15,58 @@ public class PushResolver : ICardResolver
         if (caster.Coord.DistanceTo(enemy.Coord) > data.range)
             return targets;
 
-        HexCoord pushDir = enemy.Coord - caster.Coord;
-        HexCoord dest = enemy.Coord + pushDir;
+        int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
+        HexCoord dest = WalkDirection(enemy.Coord, pushDir, data.pushDistance, enemy, grid);
 
-        if (!grid.TryGetTile(dest, out _)) return targets;
-        if (IsOccupied(dest, enemy)) return targets;
+        // Only valid if the enemy actually moves at least 1 hex
+        if (dest != enemy.Coord)
+            targets.Add(enemy.Coord);
 
-        targets.Add(enemy.Coord);
         return targets;
     }
 
     public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        HexCoord pushDir = enemy.Coord - caster.Coord;
-        HexCoord dest = enemy.Coord + pushDir;
+        int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
+        HexCoord dest = WalkDirection(enemy.Coord, pushDir, data.pushDistance, enemy, grid);
 
-        Debug.Log($"Push: {enemy.Team} pushed from {enemy.Coord} to {dest}.");
+        Debug.Log($"Push: {enemy.Team} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);
+    }
+
+    /// <summary>
+    /// Find the hex direction index (0–5) that points from 'from' away toward 'to'.
+    /// </summary>
+    private static int GetDirectionAwayFrom(HexCoord from, HexCoord at)
+    {
+        // The push direction is from the caster toward the target (away from caster)
+        int bestDir = 0;
+        int bestDist = int.MaxValue;
+        HexCoord desired = at + (at - from);
+
+        for (int i = 0; i < 6; i++)
+        {
+            int dist = at.Neighbor(i).DistanceTo(desired);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                bestDir = i;
+            }
+        }
+        return bestDir;
+    }
+
+    private static HexCoord WalkDirection(HexCoord origin, int direction, int distance, Unit moving, HexGrid grid)
+    {
+        HexCoord current = origin;
+        for (int i = 0; i < distance; i++)
+        {
+            HexCoord next = current.Neighbor(direction);
+            if (!grid.TryGetTile(next, out _)) break;
+            if (IsOccupied(next, moving)) break;
+            current = next;
+        }
+        return current;
     }
 
     private static bool IsOccupied(HexCoord coord, Unit exclude)

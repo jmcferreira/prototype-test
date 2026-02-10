@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Pull: yank the enemy 1 hex toward the caster.
-/// Valid target is the enemy's hex (if in range, not already adjacent,
-/// and pull destination is open).
+/// Pull: yank the enemy N hexes toward the caster (data.pushDistance).
+/// Valid target is the enemy's hex if within data.range, not already adjacent,
+/// and at least 1 hex of pull space exists. Stops early at occupied tiles.
 /// </summary>
 public class PullResolver : ICardResolver
 {
@@ -16,23 +16,55 @@ public class PullResolver : ICardResolver
         if (dist > data.range || dist <= 1)
             return targets;
 
-        HexCoord pullDir = caster.Coord - enemy.Coord;
-        HexCoord dest = enemy.Coord + pullDir;
+        int pullDir = GetDirectionToward(enemy.Coord, caster.Coord);
+        HexCoord dest = WalkDirection(enemy.Coord, pullDir, data.pushDistance, enemy, grid);
 
-        if (!grid.TryGetTile(dest, out _)) return targets;
-        if (IsOccupied(dest, enemy)) return targets;
+        if (dest != enemy.Coord)
+            targets.Add(enemy.Coord);
 
-        targets.Add(enemy.Coord);
         return targets;
     }
 
     public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        HexCoord pullDir = caster.Coord - enemy.Coord;
-        HexCoord dest = enemy.Coord + pullDir;
+        int pullDir = GetDirectionToward(enemy.Coord, caster.Coord);
+        HexCoord dest = WalkDirection(enemy.Coord, pullDir, data.pushDistance, enemy, grid);
 
-        Debug.Log($"Pull: {enemy.Team} pulled from {enemy.Coord} to {dest}.");
+        Debug.Log($"Pull: {enemy.Team} pulled {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);
+    }
+
+    /// <summary>
+    /// Find the hex direction index (0–5) that points from 'from' toward 'toward'.
+    /// </summary>
+    private static int GetDirectionToward(HexCoord from, HexCoord toward)
+    {
+        int bestDir = 0;
+        int bestDist = int.MaxValue;
+
+        for (int i = 0; i < 6; i++)
+        {
+            int dist = from.Neighbor(i).DistanceTo(toward);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                bestDir = i;
+            }
+        }
+        return bestDir;
+    }
+
+    private static HexCoord WalkDirection(HexCoord origin, int direction, int distance, Unit moving, HexGrid grid)
+    {
+        HexCoord current = origin;
+        for (int i = 0; i < distance; i++)
+        {
+            HexCoord next = current.Neighbor(direction);
+            if (!grid.TryGetTile(next, out _)) break;
+            if (IsOccupied(next, moving)) break;
+            current = next;
+        }
+        return current;
     }
 
     private static bool IsOccupied(HexCoord coord, Unit exclude)

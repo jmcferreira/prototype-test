@@ -82,12 +82,14 @@ public class GameSetup : MonoBehaviour
         push.cardName = "Shove";
         push.effect = CardEffect.Push;
         push.range = 1;
+        push.pushDistance = 1;
         push.cooldown = 3;
 
         var pull = ScriptableObject.CreateInstance<CardData>();
         pull.cardName = "Hook";
         pull.effect = CardEffect.Pull;
-        pull.range = 2;
+        pull.range = 3;
+        pull.pushDistance = 2;
         pull.cooldown = 3;
 
         return new[] { move, attack, push, pull };

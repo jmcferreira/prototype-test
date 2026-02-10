@@ -16,4 +16,5 @@ MonoBehaviour:
   effect: 2
   range: 1
   damage: 0
+  pushDistance: 1
   cooldown: 3
