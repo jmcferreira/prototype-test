@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Handles mouse hover highlighting and click selection on the hex grid.
@@ -26,6 +27,10 @@ public class HexInteraction : MonoBehaviour
 
     private void Update()
     {
+        // Ignore when mouse is over UI elements (card buttons, etc.)
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            return;
+
         UpdateHover();
 
         if (Input.GetMouseButtonDown(0))

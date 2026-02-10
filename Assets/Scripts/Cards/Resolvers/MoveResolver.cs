@@ -2,42 +2,44 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Move: the caster dashes up to range hexes in a straight line.
-/// Valid targets are the farthest reachable hex in each of the 6 directions.
+/// Move: the caster can move to any hex reachable within range steps.
+/// Uses flood fill to find all walkable hexes (no occupied, no off-grid).
 /// </summary>
 public class MoveResolver : ICardResolver
 {
     public List<HexCoord> GetValidTargets(CardData data, Unit caster, Unit enemy, HexGrid grid)
     {
-        var targets = new List<HexCoord>();
+        var reachable = new HashSet<HexCoord>();
+        var frontier = new Queue<(HexCoord coord, int steps)>();
+        frontier.Enqueue((caster.Coord, 0));
+        reachable.Add(caster.Coord);
 
-        for (int dir = 0; dir < 6; dir++)
+        while (frontier.Count > 0)
         {
-            HexCoord dest = WalkDirection(caster.Coord, dir, data.range, grid);
-            if (dest != caster.Coord)
-                targets.Add(dest);
+            var (current, steps) = frontier.Dequeue();
+            if (steps >= data.range) continue;
+
+            for (int dir = 0; dir < 6; dir++)
+            {
+                HexCoord next = current.Neighbor(dir);
+                if (reachable.Contains(next)) continue;
+                if (!grid.TryGetTile(next, out _)) continue;
+                if (IsOccupied(next)) continue;
+
+                reachable.Add(next);
+                frontier.Enqueue((next, steps + 1));
+            }
         }
 
-        return targets;
+        // Remove the caster's own hex — can't "move" to where you already are
+        reachable.Remove(caster.Coord);
+        return new List<HexCoord>(reachable);
     }
 
     public void Resolve(CardData data, Unit caster, Unit enemy, HexGrid grid, HexCoord target)
     {
-        Debug.Log($"Move: {caster.Team} dashed to {target}.");
+        Debug.Log($"Move: {caster.Team} moved to {target}.");
         caster.ForceMoveTo(target);
-    }
-
-    private static HexCoord WalkDirection(HexCoord origin, int direction, int range, HexGrid grid)
-    {
-        HexCoord current = origin;
-        for (int i = 0; i < range; i++)
-        {
-            HexCoord next = current.Neighbor(direction);
-            if (!grid.TryGetTile(next, out _)) break;
-            if (IsOccupied(next)) break;
-            current = next;
-        }
-        return current;
     }
 
     private static bool IsOccupied(HexCoord coord)
