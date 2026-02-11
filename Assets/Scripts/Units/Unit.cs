@@ -23,6 +23,10 @@ public abstract class Unit : MonoBehaviour
     private HexGrid _grid;
     private float _hexSize;
 
+    // Chip visual references for hover highlight
+    private Material _rimMat;
+    private Color _rimBaseColor;
+
     // --- Status effects ---
     private readonly Dictionary<StatusEffectType, int> _statuses = new();
 
@@ -50,7 +54,9 @@ public abstract class Unit : MonoBehaviour
         rim.transform.SetParent(transform);
         rim.transform.localPosition = Vector3.zero;
         rim.transform.localScale = new Vector3(0.78f, 0.045f, 0.78f);
-        rim.GetComponent<MeshRenderer>().material = CreateUnlitMat(teamDark);
+        _rimMat = CreateUnlitMat(teamDark);
+        _rimBaseColor = teamDark;
+        rim.GetComponent<MeshRenderer>().material = _rimMat;
         rim.name = "ChipRim";
 
         // Poker-chip face (inner, brighter)
@@ -305,6 +311,17 @@ public abstract class Unit : MonoBehaviour
     private void PlaceAt(HexCoord coord)
     {
         transform.position = coord.ToWorldPosition(_hexSize) + Vector3.up * 0.1f;
+    }
+
+    /// <summary>
+    /// Brighten the poker-chip rim when hovered, restore on unhover.
+    /// </summary>
+    public void SetChipHighlighted(bool highlighted)
+    {
+        if (_rimMat == null) return;
+        _rimMat.color = highlighted
+            ? new Color(_rimBaseColor.r + 0.45f, _rimBaseColor.g + 0.45f, _rimBaseColor.b + 0.45f)
+            : _rimBaseColor;
     }
 
     /// <summary>

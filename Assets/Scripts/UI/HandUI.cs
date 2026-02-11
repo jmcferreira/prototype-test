@@ -198,6 +198,7 @@ public class HandUI : MonoBehaviour
         _actionStepText.alignment = TextAnchor.MiddleCenter;
         _actionStepText.color = new Color(0.95f, 0.92f, 0.80f);
         _actionStepText.fontStyle = FontStyle.Bold;
+        _actionStepText.raycastTarget = false;
         var labelLe = labelGo.AddComponent<LayoutElement>();
         labelLe.preferredHeight = 36;
 

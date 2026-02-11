@@ -240,6 +240,65 @@ public class EnemyUnit : Unit
         return best;
     }
 
+    /// <summary>
+    /// Preview what this enemy would do on its turn (same AI logic, no side effects).
+    /// Returns a list of (target hex, effect type) pairs for display.
+    /// </summary>
+    public List<(HexCoord target, CardEffect effect)> ComputeIntent(List<Unit> allUnits)
+    {
+        var intents = new List<(HexCoord, CardEffect)>();
+
+        Unit primaryTarget = FindPrimaryTarget(allUnits);
+        if (primaryTarget == null) return intents;
+
+        // Same card selection logic as ExecuteTurn
+        CardInstance chosenCard = null;
+
+        foreach (var card in _cards)
+        {
+            if (!card.IsReady || card.ActionCount == 0) continue;
+            bool canDealDamage = false;
+            for (int i = 0; i < card.ActionCount; i++)
+            {
+                var action = card.GetAction(i);
+                var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
+                if (targets.Count > 0 && IsDamageEffect(action.effect))
+                { canDealDamage = true; break; }
+            }
+            if (canDealDamage) { chosenCard = card; break; }
+        }
+
+        if (chosenCard == null)
+        {
+            foreach (var card in _cards)
+            {
+                if (!card.IsReady || card.ActionCount == 0) continue;
+                for (int i = 0; i < card.ActionCount; i++)
+                {
+                    var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);
+                    if (targets.Count > 0) { chosenCard = card; break; }
+                }
+                if (chosenCard != null) break;
+            }
+        }
+
+        if (chosenCard == null) return intents;
+
+        // Preview each action's best target
+        for (int i = 0; i < chosenCard.ActionCount; i++)
+        {
+            var action = chosenCard.GetAction(i);
+            var targets = chosenCard.GetValidTargetsForAction(i, this, allUnits, Grid);
+            if (targets.Count == 0) continue;
+            if (action.targetSelf || action.effect == CardEffect.ReduceCooldown) continue;
+
+            HexCoord best = PickBestTarget(targets, primaryTarget);
+            intents.Add((best, action.effect));
+        }
+
+        return intents;
+    }
+
     private void HighlightCoords(List<HexCoord> coords, bool highlight)
     {
         foreach (var coord in coords)

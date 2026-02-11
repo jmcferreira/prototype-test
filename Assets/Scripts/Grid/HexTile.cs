@@ -18,6 +18,8 @@ public class HexTile : MonoBehaviour
     private Material _mat;
     private bool _isSelected;
     private bool _isTargetHovered;
+    private bool _hasIntent;
+    private Color _intentColor;
 
     public void Init(HexCoord coord, float hexSize)
     {
@@ -41,6 +43,7 @@ public class HexTile : MonoBehaviour
     public void SetHovered(bool hovered)
     {
         if (_isSelected) return;
+        if (_hasIntent && !hovered) { _mat.color = _intentColor; return; }
         _mat.color = hovered ? HoverColor : DefaultColor;
     }
 
@@ -60,6 +63,20 @@ public class HexTile : MonoBehaviour
         if (!_isSelected) return;
         _isTargetHovered = hovered;
         _mat.color = hovered ? TargetHoverColor : SelectedColor;
+    }
+
+    /// <summary>
+    /// Show enemy intent highlight. Uses a separate color layer that doesn't
+    /// interfere with selection/hover. Clear with SetIntentHighlight(false, ...).
+    /// </summary>
+    public void SetIntentHighlight(bool show, Color color = default)
+    {
+        _hasIntent = show;
+        _intentColor = color;
+        if (show && !_isSelected)
+            _mat.color = color;
+        else if (!show && !_isSelected)
+            _mat.color = DefaultColor;
     }
 
     /// <summary>

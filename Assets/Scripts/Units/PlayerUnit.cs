@@ -28,6 +28,14 @@ public class PlayerUnit : Unit
     private int _multiTargetRemaining;
     private HashSet<HexCoord> _multiTargetExclude = new();
 
+    // Enemy intent hover
+    private EnemyUnit _hoveredEnemy;
+    private readonly List<(HexCoord target, HexTile tile)> _intentTiles = new();
+
+    // Intent colours
+    private static readonly Color IntentMove   = new Color(1f, 0.75f, 0.25f, 0.7f);   // orange
+    private static readonly Color IntentAttack = new Color(1f, 0.25f, 0.20f, 0.7f);    // red
+
     public void InitHand(CardData[] cardDatas)
     {
         Hand = new Hand(cardDatas);
@@ -61,6 +69,7 @@ public class PlayerUnit : Unit
 
     public override void OnTurnEnd()
     {
+        ClearIntentHover();
         ClearTargetHover();
         ClearHighlights();
         _selectedCard = null;
@@ -90,7 +99,9 @@ public class PlayerUnit : Unit
 
     private void Update()
     {
-        if (_state == State.CardSelected)
+        if (_state == State.Idle)
+            UpdateEnemyIntentHover();
+        else if (_state == State.CardSelected)
             UpdateCardSelected();
     }
 
@@ -101,6 +112,61 @@ public class PlayerUnit : Unit
         _state = State.Idle;
         _handUI?.SetSelectedCard(-1);
         _handUI?.HideActionStep();
+    }
+
+    private void UpdateEnemyIntentHover()
+    {
+        var tileUnderMouse = _hexInteraction?.GetTileUnderMouse();
+        EnemyUnit enemy = null;
+
+        if (tileUnderMouse != null)
+        {
+            var allUnits = _turnManager.GetAliveUnits();
+            foreach (var u in allUnits)
+            {
+                if (u is EnemyUnit eu && eu.IsAlive && eu.Coord == tileUnderMouse.Coord)
+                {
+                    enemy = eu;
+                    break;
+                }
+            }
+        }
+
+        // Same enemy — nothing to do
+        if (enemy == _hoveredEnemy) return;
+
+        // Clear previous
+        ClearIntentHover();
+
+        if (enemy == null) return;
+
+        // Show new intent
+        _hoveredEnemy = enemy;
+        _hoveredEnemy.SetChipHighlighted(true);
+
+        var allAlive = _turnManager.GetAliveUnits();
+        var intents = enemy.ComputeIntent(allAlive);
+        foreach (var (target, effect) in intents)
+        {
+            if (!Grid.TryGetTile(target, out HexTile tile)) continue;
+
+            bool isMove = effect == CardEffect.Move || effect == CardEffect.Dash || effect == CardEffect.Jump;
+            Color color = isMove ? IntentMove : IntentAttack;
+            tile.SetIntentHighlight(true, color);
+            _intentTiles.Add((target, tile));
+        }
+    }
+
+    private void ClearIntentHover()
+    {
+        if (_hoveredEnemy != null)
+        {
+            _hoveredEnemy.SetChipHighlighted(false);
+            _hoveredEnemy = null;
+        }
+        foreach (var (_, tile) in _intentTiles)
+            tile.SetIntentHighlight(false);
+        _intentTiles.Clear();
     }
 
     private void HandleCardClicked(int index)
@@ -160,6 +226,7 @@ public class PlayerUnit : Unit
 
     private void EnterCardSelected(CardInstance card, int index)
     {
+        ClearIntentHover();
         _selectedCard = card;
         _selectedCardIndex = index;
         _currentActionIndex = 0;
