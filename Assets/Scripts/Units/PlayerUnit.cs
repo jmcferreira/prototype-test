@@ -61,10 +61,16 @@ public class PlayerUnit : Unit
 
     public override void OnTurnStart()
     {
+        base.OnTurnStart();
         Hand?.TickCooldowns();
         _handUI?.Refresh(Hand);
         Debug.Log("--- Your turn — pick a card or pass. ---");
         EnterIdle();
+    }
+
+    protected override List<Unit> GetAliveUnitsForPassive()
+    {
+        return _turnManager?.GetAliveUnits() ?? new List<Unit> { this };
     }
 
     public override void OnTurnEnd()

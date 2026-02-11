@@ -20,6 +20,13 @@ public abstract class Unit : MonoBehaviour
     /// <summary>Fired when HP or statuses change. UI panels subscribe to this.</summary>
     public event Action OnChanged;
 
+    // --- Passive skill ---
+    public PassiveSkill Passive { get; private set; }
+
+    // --- Turn action tracking ---
+    public bool DidMoveThisTurn { get; private set; }
+    public bool DidAttackThisTurn { get; private set; }
+
     private HexGrid _grid;
     private float _hexSize;
 
@@ -90,6 +97,24 @@ public abstract class Unit : MonoBehaviour
         mat.color = color;
         return mat;
     }
+
+    /// <summary>
+    /// Assign a passive skill to this unit. Call once during setup.
+    /// </summary>
+    public void SetPassive(PassiveSkill passive)
+    {
+        Passive = passive;
+    }
+
+    /// <summary>
+    /// Mark that this unit performed a Move/Dash/Jump this turn.
+    /// </summary>
+    public void NotifyMoved() => DidMoveThisTurn = true;
+
+    /// <summary>
+    /// Mark that this unit performed an Attack this turn.
+    /// </summary>
+    public void NotifyAttacked() => DidAttackThisTurn = true;
 
     /// <summary>
     /// Move this unit to a hex. Used by card resolvers for move/push/pull.
@@ -335,13 +360,37 @@ public abstract class Unit : MonoBehaviour
     public virtual void IncreaseRandomCardCooldown(int amount) { }
 
     /// <summary>Called by TurnManager when this unit's turn begins.</summary>
-    public virtual void OnTurnStart() { }
+    public virtual void OnTurnStart()
+    {
+        DidMoveThisTurn = false;
+        DidAttackThisTurn = false;
+    }
 
     /// <summary>Called by TurnManager when this unit's turn ends.</summary>
     public virtual void OnTurnEnd()
     {
+        // Activate passive skill before status triggers
+        ActivatePassive();
+
         // Poison damage, then decay all statuses (Poison -1 stack, Blind wears off, etc.)
         TriggerStatuses(StatusTrigger.OnTurnEnd);
         DecayStatuses();
+    }
+
+    /// <summary>
+    /// Try to activate this unit's passive skill if conditions are met.
+    /// </summary>
+    protected void ActivatePassive()
+    {
+        if (Passive == null || !IsAlive) return;
+        Passive.TryActivate(this, GetAliveUnitsForPassive(), _grid);
+    }
+
+    /// <summary>
+    /// Subclasses with TurnManager access override this to provide alive units list.
+    /// </summary>
+    protected virtual List<Unit> GetAliveUnitsForPassive()
+    {
+        return new List<Unit> { this };
     }
 }

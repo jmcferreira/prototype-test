@@ -61,6 +61,16 @@ public class GameSetup : MonoBehaviour
         orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6, "O");
         orc.InitCards(orcCards);
 
+        // --- Passive skills ---
+        player.SetPassive(new SetupPassive());
+        spider1.SetPassive(new NestingPassive());
+        spider2.SetPassive(new NestingPassive());
+        orc.SetPassive(new WarcryPassive());
+
+        // --- Token manager ---
+        var tokenManagerGo = new GameObject("TokenManager");
+        tokenManagerGo.AddComponent<TokenManager>();
+
         // --- HexInteraction ---
         var interactionGo = new GameObject("HexInteraction");
         var hexInteraction = interactionGo.AddComponent<HexInteraction>();

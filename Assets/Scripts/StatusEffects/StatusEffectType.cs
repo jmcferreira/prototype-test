@@ -9,4 +9,5 @@ public enum StatusEffectType
     Blind,
     Swift,
     Root,
+    Strength,
 }

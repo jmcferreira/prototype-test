@@ -46,6 +46,7 @@ public class PushAoEResolver : ICardResolver
         {
             Debug.Log($"PushAoE: {unit.DisplayName} pushed from {unit.Coord} to {dest}.");
             unit.ForceMoveTo(dest);
+            TokenManager.Instance?.OnUnitEnterHex(unit, dest, allUnits);
         }
     }
 

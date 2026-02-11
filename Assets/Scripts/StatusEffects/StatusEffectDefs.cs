@@ -114,6 +114,19 @@ public static class StatusEffectDefs
                 BlocksAttackTargeting = false,
             }
         },
+        {
+            StatusEffectType.Strength, new Def
+            {
+                Name = "Strength",
+                Icon = "\u2694",                            // ⚔ crossed swords
+                IconColor = new Color(1f, 0.35f, 0.35f),   // red
+                MaxStacks = 5,
+                DamageTrigger = StatusTrigger.None,         // consumed on next attack (like Burn but self)
+                DamagePerStack = 0,
+                DecayPerTurn = 0,                           // persists until consumed
+                BlocksAttackTargeting = false,
+            }
+        },
     };
     // ────────────────────────────────────────────────────────────────────
 

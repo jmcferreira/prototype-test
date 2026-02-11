@@ -25,6 +25,11 @@ public class AttackLineResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
+        caster.NotifyAttacked();
+
+        // Consume Strength from caster once for the whole line
+        int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
+
         // Compute hex line from caster to target
         var line = HexLineDraw(caster.Coord, target);
 
@@ -46,13 +51,15 @@ public class AttackLineResolver : ICardResolver
 
             if (hitUnit == null) continue;
 
-            // Consume Burn: bonus damage equal to stacks, then remove all
+            // Consume Burn from target
             int burnStacks = hitUnit.ConsumeStatus(StatusEffectType.Burn);
-            int dmg = action.damage + burnStacks;
+            int dmg = action.damage + strStacks + burnStacks;
 
             hitUnit.TakeHit(dmg);
-            Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {dmg} damage" +
-                      (burnStacks > 0 ? $" (+{burnStacks} Burn)." : "."));
+            string bonusLog = "";
+            if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
+            if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
+            Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {dmg} damage{bonusLog}.");
 
             if (action.statusStacks > 0)
             {

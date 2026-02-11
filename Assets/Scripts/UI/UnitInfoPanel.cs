@@ -50,13 +50,14 @@ public class UnitInfoPanel : MonoBehaviour
     {
         var rect = gameObject.AddComponent<RectTransform>();
 
+        bool hasPassive = unit.Passive != null;
         if (isLeft)
         {
             rect.anchorMin = new Vector2(0f, 0.5f);
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
             rect.anchoredPosition = new Vector2(12f, 80f);
-            rect.sizeDelta = new Vector2(180f, 260f);
+            rect.sizeDelta = new Vector2(180f, hasPassive ? 310f : 260f);
         }
         else
         {
@@ -64,9 +65,9 @@ public class UnitInfoPanel : MonoBehaviour
             rect.anchorMax = new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
             // Stack multiple enemy panels vertically
-            float y = -100f + stackIndex * 200f;
+            float y = -100f + stackIndex * 220f;
             rect.anchoredPosition = new Vector2(-12f, y);
-            rect.sizeDelta = new Vector2(170f, 190f);
+            rect.sizeDelta = new Vector2(170f, hasPassive ? 230f : 190f);
         }
 
         // Coloured border (bright = active turn, dim = inactive)
@@ -106,6 +107,10 @@ public class UnitInfoPanel : MonoBehaviour
 
         // Status icons row
         BuildStatusRow(innerGo.transform);
+
+        // Passive skill description
+        if (unit.Passive != null)
+            BuildPassiveSection(innerGo.transform, unit.Passive, isLeft);
 
         // Deceased overlay (hidden until unit dies)
         BuildDeceasedOverlay();
@@ -174,6 +179,28 @@ public class UnitInfoPanel : MonoBehaviour
             stGo.SetActive(false);
             _statusTexts[type] = stText;
         }
+    }
+
+    private void BuildPassiveSection(Transform parent, PassiveSkill passive, bool isLeft)
+    {
+        // Divider line
+        var divGo = new GameObject("PassiveDivider");
+        divGo.transform.SetParent(parent, false);
+        var divImg = divGo.AddComponent<Image>();
+        divImg.color = new Color(0.4f, 0.4f, 0.4f, 0.5f);
+        divImg.raycastTarget = false;
+        var divLe = divGo.AddComponent<LayoutElement>();
+        divLe.preferredHeight = 1;
+
+        // Passive name (bold, gold)
+        var nameText = CreateText(parent, "PassiveName", isLeft ? 13 : 11, FontStyle.Bold,
+            new Color(1f, 0.85f, 0.4f), isLeft ? 18 : 16);
+        nameText.text = $"\u2726 {passive.Name}"; // ✦ star decoration
+
+        // Passive description (italic, grey)
+        var descText = CreateText(parent, "PassiveDesc", isLeft ? 11 : 10, FontStyle.Italic,
+            new Color(0.7f, 0.7f, 0.7f), isLeft ? 28 : 22);
+        descText.text = passive.Description;
     }
 
     private void BuildDeceasedOverlay()

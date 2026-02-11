@@ -37,6 +37,7 @@ public class PushResolver : ICardResolver
 
         Debug.Log($"Push: {enemy.DisplayName} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
         enemy.ForceMoveTo(dest);
+        TokenManager.Instance?.OnUnitEnterHex(enemy, dest, allUnits);
     }
 
     private static Unit FindUnitAt(HexCoord coord, Unit exclude, List<Unit> allUnits)

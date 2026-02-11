@@ -22,20 +22,27 @@ public class AttackAoEResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
+        caster.NotifyAttacked();
+
+        // Consume Strength from caster once for the whole AoE
+        int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
+
         int hitCount = 0;
         foreach (var unit in allUnits)
         {
             if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
             {
-                // Consume Burn: bonus damage equal to stacks, then remove all
+                // Consume Burn from target
                 int burnStacks = unit.ConsumeStatus(StatusEffectType.Burn);
-                int dmg = action.damage + burnStacks;
+                int dmg = action.damage + strStacks + burnStacks;
 
                 unit.TakeHit(dmg);
                 hitCount++;
-                Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage" +
-                          (burnStacks > 0 ? $" (+{burnStacks} Burn)." : "."));
+                string bonusLog = "";
+                if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
+                if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
+                Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
             }
         }
         Debug.Log($"AoE: {caster.DisplayName} hit {hitCount} target(s) total.");

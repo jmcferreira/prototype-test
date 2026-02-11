@@ -46,11 +46,18 @@ public class EnemyUnit : Unit
 
     public override void OnTurnStart()
     {
+        base.OnTurnStart();
+
         // Tick cooldowns
         foreach (var card in _cards)
             card.TickCooldown();
 
         StartCoroutine(ExecuteTurn());
+    }
+
+    protected override List<Unit> GetAliveUnitsForPassive()
+    {
+        return _turnManager?.GetAliveUnits() ?? new List<Unit> { this };
     }
 
     private IEnumerator ExecuteTurn()

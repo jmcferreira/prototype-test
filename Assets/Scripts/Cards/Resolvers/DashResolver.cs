@@ -39,6 +39,8 @@ public class DashResolver : ICardResolver
     {
         Debug.Log($"Dash: {caster.DisplayName} dashed to {target}.");
         caster.ForceMoveTo(target);
+        caster.NotifyMoved();
+        TokenManager.Instance?.OnUnitEnterHex(caster, target, allUnits);
     }
 
     private static bool IsOccupied(HexCoord coord, List<Unit> allUnits)

@@ -48,6 +48,8 @@ public class MoveResolver : ICardResolver
     {
         Debug.Log($"Move: {caster.DisplayName} moved to {target}.");
         caster.ForceMoveTo(target);
+        caster.NotifyMoved();
+        TokenManager.Instance?.OnUnitEnterHex(caster, target, allUnits);
     }
 
     private static bool IsOccupied(HexCoord coord, List<Unit> allUnits)

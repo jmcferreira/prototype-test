@@ -35,13 +35,21 @@ public class AttackResolver : ICardResolver
                 if (action.bonusDamageAtMaxRange && caster.Coord.DistanceTo(target) >= action.range)
                     dmg += action.bonusDamage;
 
-                // Consume Burn: bonus damage equal to stacks, then remove all
+                caster.NotifyAttacked();
+
+                // Consume Strength from caster: bonus damage equal to stacks
+                int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
+                dmg += strStacks;
+
+                // Consume Burn from target: bonus damage equal to stacks
                 int burnStacks = unit.ConsumeStatus(StatusEffectType.Burn);
                 dmg += burnStacks;
 
                 unit.TakeHit(dmg);
-                Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage" +
-                          (burnStacks > 0 ? $" (+{burnStacks} Burn)." : "."));
+                string bonusLog = "";
+                if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
+                if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
+                Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
 
                 // Apply status-on-hit if configured
                 if (action.statusStacks > 0)
