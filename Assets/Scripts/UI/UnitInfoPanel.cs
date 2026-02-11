@@ -9,8 +9,9 @@ using UnityEngine.UI;
 /// Border colour brightens when it is that unit's turn.
 /// Status effects show as "Icon Name X" with hover tooltips.
 /// Enemy panels show intent card popup on hover (panel or chip).
+/// Panels expand 30% on hover for readability (IPointerEnter/Exit).
 /// </summary>
-public class UnitInfoPanel : MonoBehaviour
+public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     // Static registry so external systems (PlayerUnit chip hover) can find panels by unit
     private static readonly Dictionary<Unit, UnitInfoPanel> _registry = new();
@@ -70,6 +71,31 @@ public class UnitInfoPanel : MonoBehaviour
         }
     }
 
+    // ── Hover scale (IPointerEnterHandler / IPointerExitHandler) ────────
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        transform.localScale = Vector3.one * 1.3f;
+
+        // For enemy panels, also show intent
+        if (!_isLeft && _unit != null && _unit.IsAlive && _unit.Team == Team.Enemy)
+        {
+            _panelHovered = true;
+            ComputeAndShowIntent();
+        }
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        transform.localScale = Vector3.one;
+
+        if (!_isLeft)
+        {
+            _panelHovered = false;
+            HideIntent();
+        }
+    }
+
     /// <summary>
     /// Show intent card popup next to this panel. Called by PlayerUnit chip hover
     /// or by panel hover EventTrigger.
@@ -115,8 +141,8 @@ public class UnitInfoPanel : MonoBehaviour
             rect.anchorMin = new Vector2(0f, 0.5f);
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(12f, 100f);
-            rect.sizeDelta = new Vector2(234f, hasPassive ? 400f : 340f);
+            rect.anchoredPosition = new Vector2(12f, 80f);
+            rect.sizeDelta = new Vector2(180f, hasPassive ? 310f : 260f);
         }
         else
         {
@@ -124,28 +150,16 @@ public class UnitInfoPanel : MonoBehaviour
             rect.anchorMax = new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
             // Stack multiple enemy panels vertically (with gap between panels)
-            float y = -130f + stackIndex * 315f;
+            float y = -100f + stackIndex * 245f;
             rect.anchoredPosition = new Vector2(-12f, y);
-            rect.sizeDelta = new Vector2(220f, hasPassive ? 300f : 250f);
+            rect.sizeDelta = new Vector2(170f, hasPassive ? 230f : 190f);
         }
 
         // Coloured border (bright = active turn, dim = inactive)
         _borderImage = gameObject.AddComponent<Image>();
         _borderImage.color = _borderInactiveColor;
-        // Enemy panels: raycast target for hover detection
-        _borderImage.raycastTarget = !isLeft;
-
-        // Enemy panel hover → show/hide intent
-        if (!isLeft)
-        {
-            var trigger = gameObject.AddComponent<EventTrigger>();
-            var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enterEntry.callback.AddListener((_) => OnPanelHoverEnter());
-            trigger.triggers.Add(enterEntry);
-            var exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exitEntry.callback.AddListener((_) => OnPanelHoverExit());
-            trigger.triggers.Add(exitEntry);
-        }
+        // Raycast target on all panels for hover detection
+        _borderImage.raycastTarget = true;
 
         // Inner dark background
         var innerGo = new GameObject("Inner");
@@ -161,21 +175,21 @@ public class UnitInfoPanel : MonoBehaviour
 
         // Vertical layout
         var layout = innerGo.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(8, 8, 8, 8);
-        layout.spacing = 4;
+        layout.padding = new RectOffset(6, 6, 6, 6);
+        layout.spacing = 3;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
         // Avatar
-        int avatarSize = isLeft ? 130 : 80;
+        int avatarSize = isLeft ? 100 : 60;
         BuildAvatar(innerGo.transform, teamColor, avatarSize);
 
         // Name
-        _nameText = CreateText(innerGo.transform, "Name", isLeft ? 22 : 19, FontStyle.Bold, Color.white, isLeft ? 32 : 28);
+        _nameText = CreateText(innerGo.transform, "Name", isLeft ? 18 : 15, FontStyle.Bold, Color.white, isLeft ? 26 : 22);
 
         // HP
-        _hpText = CreateText(innerGo.transform, "HP", isLeft ? 30 : 22, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), isLeft ? 38 : 30);
+        _hpText = CreateText(innerGo.transform, "HP", isLeft ? 24 : 18, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), isLeft ? 30 : 24);
 
         // Status list (vertical, one row per active status)
         BuildStatusList(innerGo.transform, isLeft);
@@ -212,7 +226,7 @@ public class UnitInfoPanel : MonoBehaviour
         letterGo.transform.SetParent(go.transform, false);
         var txt = letterGo.AddComponent<Text>();
         txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        txt.fontSize = size > 80 ? 48 : 30;
+        txt.fontSize = size > 60 ? 36 : 24;
         txt.fontStyle = FontStyle.Bold;
         txt.alignment = TextAnchor.MiddleCenter;
         txt.color = new Color(1f, 1f, 1f, 0.85f);
@@ -239,8 +253,8 @@ public class UnitInfoPanel : MonoBehaviour
         var containerLe = containerGo.AddComponent<LayoutElement>();
         containerLe.flexibleHeight = 1;
 
-        int fontSize = isLeft ? 17 : 14;
-        float rowHeight = isLeft ? 24f : 20f;
+        int fontSize = isLeft ? 13 : 11;
+        float rowHeight = isLeft ? 18f : 15f;
 
         foreach (var kvp in StatusEffectDefs.All)
         {
@@ -313,14 +327,14 @@ public class UnitInfoPanel : MonoBehaviour
             tooltipRect.pivot = new Vector2(1f, 0.5f);
             tooltipRect.anchoredPosition = new Vector2(-6f, 0f);
         }
-        tooltipRect.sizeDelta = new Vector2(250f, 60f);
+        tooltipRect.sizeDelta = new Vector2(200f, 50f);
 
         // Text
         var textGo = new GameObject("TooltipText");
         textGo.transform.SetParent(_tooltipGo.transform, false);
         _tooltipText = textGo.AddComponent<Text>();
         _tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _tooltipText.fontSize = 14;
+        _tooltipText.fontSize = 11;
         _tooltipText.fontStyle = FontStyle.Italic;
         _tooltipText.alignment = TextAnchor.MiddleCenter;
         _tooltipText.color = new Color(0.85f, 0.85f, 0.85f);
@@ -356,10 +370,10 @@ public class UnitInfoPanel : MonoBehaviour
         _intentGo = new GameObject("IntentPopup");
         _intentGo.transform.SetParent(transform, false);
 
-        // Dark background
+        // Dark background — raycastTarget=true so hover propagates to panel
         var bgImg = _intentGo.AddComponent<Image>();
         bgImg.color = new Color(0.08f, 0.06f, 0.12f, 0.95f);
-        bgImg.raycastTarget = false;
+        bgImg.raycastTarget = true;
 
         var intentRect = _intentGo.GetComponent<RectTransform>();
         // Stretch to match full panel height, positioned to its left
@@ -367,7 +381,7 @@ public class UnitInfoPanel : MonoBehaviour
         intentRect.anchorMax = new Vector2(0f, 1f);
         intentRect.pivot = new Vector2(1f, 0.5f);
         intentRect.anchoredPosition = new Vector2(-6f, 0f);
-        intentRect.sizeDelta = new Vector2(220f, 0f);
+        intentRect.sizeDelta = new Vector2(170f, 0f);
 
         // Vertical layout inside
         var layoutGo = new GameObject("IntentLayout");
@@ -375,10 +389,10 @@ public class UnitInfoPanel : MonoBehaviour
         var layoutRect = layoutGo.AddComponent<RectTransform>();
         layoutRect.anchorMin = Vector2.zero;
         layoutRect.anchorMax = Vector2.one;
-        layoutRect.offsetMin = new Vector2(10f, 6f);
-        layoutRect.offsetMax = new Vector2(-10f, -6f);
+        layoutRect.offsetMin = new Vector2(8f, 4f);
+        layoutRect.offsetMax = new Vector2(-8f, -4f);
         var vl = layoutGo.AddComponent<VerticalLayoutGroup>();
-        vl.spacing = 5;
+        vl.spacing = 4;
         vl.childAlignment = TextAnchor.UpperLeft;
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
@@ -388,34 +402,34 @@ public class UnitInfoPanel : MonoBehaviour
         headerGo.transform.SetParent(layoutGo.transform, false);
         var headerText = headerGo.AddComponent<Text>();
         headerText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        headerText.fontSize = 13;
+        headerText.fontSize = 10;
         headerText.fontStyle = FontStyle.Normal;
         headerText.alignment = TextAnchor.MiddleLeft;
         headerText.color = new Color(0.6f, 0.6f, 0.7f);
         headerText.text = "Next:";
         headerText.raycastTarget = false;
         var headerLe = headerGo.AddComponent<LayoutElement>();
-        headerLe.preferredHeight = 18;
+        headerLe.preferredHeight = 14;
 
         // Card name (bold, orange-red)
         var nameGo = new GameObject("IntentCardName");
         nameGo.transform.SetParent(layoutGo.transform, false);
         _intentCardName = nameGo.AddComponent<Text>();
         _intentCardName.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _intentCardName.fontSize = 17;
+        _intentCardName.fontSize = 13;
         _intentCardName.fontStyle = FontStyle.Bold;
         _intentCardName.alignment = TextAnchor.MiddleLeft;
         _intentCardName.color = new Color(1f, 0.6f, 0.3f);
         _intentCardName.raycastTarget = false;
         var nameLe = nameGo.AddComponent<LayoutElement>();
-        nameLe.preferredHeight = 24;
+        nameLe.preferredHeight = 18;
 
         // Action list (one line per action, grey)
         var actionsGo = new GameObject("IntentActions");
         actionsGo.transform.SetParent(layoutGo.transform, false);
         _intentActions = actionsGo.AddComponent<Text>();
         _intentActions.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _intentActions.fontSize = 14;
+        _intentActions.fontSize = 11;
         _intentActions.fontStyle = FontStyle.Normal;
         _intentActions.alignment = TextAnchor.UpperLeft;
         _intentActions.color = new Color(0.8f, 0.8f, 0.8f);
@@ -426,19 +440,6 @@ public class UnitInfoPanel : MonoBehaviour
 
         _intentGo.SetActive(false);
         _intentVisible = false;
-    }
-
-    private void OnPanelHoverEnter()
-    {
-        if (_unit == null || !_unit.IsAlive || _unit.Team != Team.Enemy) return;
-        _panelHovered = true;
-        ComputeAndShowIntent();
-    }
-
-    private void OnPanelHoverExit()
-    {
-        _panelHovered = false;
-        HideIntent();
     }
 
     private void ComputeAndShowIntent()
@@ -464,13 +465,13 @@ public class UnitInfoPanel : MonoBehaviour
         divLe.preferredHeight = 1;
 
         // Passive name (bold, gold)
-        var nameText = CreateText(parent, "PassiveName", isLeft ? 17 : 14, FontStyle.Bold,
-            new Color(1f, 0.85f, 0.4f), isLeft ? 24 : 20);
+        var nameText = CreateText(parent, "PassiveName", isLeft ? 13 : 11, FontStyle.Bold,
+            new Color(1f, 0.85f, 0.4f), isLeft ? 18 : 16);
         nameText.text = $"\u2726 {passive.Name}"; // ✦ star decoration
 
         // Passive description (italic, grey)
-        var descText = CreateText(parent, "PassiveDesc", isLeft ? 14 : 13, FontStyle.Italic,
-            new Color(0.7f, 0.7f, 0.7f), isLeft ? 36 : 28);
+        var descText = CreateText(parent, "PassiveDesc", isLeft ? 11 : 10, FontStyle.Italic,
+            new Color(0.7f, 0.7f, 0.7f), isLeft ? 28 : 22);
         descText.text = passive.Description;
     }
 
