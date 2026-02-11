@@ -8,9 +8,15 @@ using UnityEngine.UI;
 /// Player panel anchors to the left, enemy panels stack on the right.
 /// Border colour brightens when it is that unit's turn.
 /// Status effects show as "Icon Name X" with hover tooltips.
+/// Enemy panels show intent card popup on hover (panel or chip).
 /// </summary>
 public class UnitInfoPanel : MonoBehaviour
 {
+    // Static registry so external systems (PlayerUnit chip hover) can find panels by unit
+    private static readonly Dictionary<Unit, UnitInfoPanel> _registry = new();
+    public static UnitInfoPanel GetPanel(Unit unit) =>
+        _registry.TryGetValue(unit, out var p) ? p : null;
+
     private Unit _unit;
     private TurnManager _turnManager;
     private bool _isLeft;
@@ -24,6 +30,13 @@ public class UnitInfoPanel : MonoBehaviour
     // Tooltip
     private GameObject _tooltipGo;
     private Text _tooltipText;
+
+    // Intent card popup (enemy panels only)
+    private GameObject _intentGo;
+    private Text _intentCardName;
+    private Text _intentActions;
+    private bool _intentVisible;
+    private bool _panelHovered;
 
     private Color _borderActiveColor;
     private Color _borderInactiveColor;
@@ -45,11 +58,49 @@ public class UnitInfoPanel : MonoBehaviour
         Refresh();
 
         _unit.OnChanged += Refresh;
+        _registry[unit] = this;
     }
 
     private void OnDestroy()
     {
-        if (_unit != null) _unit.OnChanged -= Refresh;
+        if (_unit != null)
+        {
+            _unit.OnChanged -= Refresh;
+            _registry.Remove(_unit);
+        }
+    }
+
+    /// <summary>
+    /// Show intent card popup next to this panel. Called by PlayerUnit chip hover
+    /// or by panel hover EventTrigger.
+    /// </summary>
+    public void ShowIntent(CardData cardData)
+    {
+        if (_intentGo == null || cardData == null) return;
+        _intentCardName.text = cardData.cardName;
+
+        // Build action list, one per line
+        var lines = new List<string>();
+        if (cardData.actions != null)
+        {
+            foreach (var action in cardData.actions)
+                lines.Add(Hand.DescribeAction(action));
+        }
+        _intentActions.text = string.Join("\n", lines);
+        _intentGo.SetActive(true);
+        _intentVisible = true;
+    }
+
+    /// <summary>
+    /// Hide the intent card popup.
+    /// </summary>
+    public void HideIntent()
+    {
+        if (_intentGo != null && _intentVisible)
+        {
+            _intentGo.SetActive(false);
+            _intentVisible = false;
+        }
     }
 
     // ── Build ──────────────────────────────────────────────────────────
@@ -81,7 +132,20 @@ public class UnitInfoPanel : MonoBehaviour
         // Coloured border (bright = active turn, dim = inactive)
         _borderImage = gameObject.AddComponent<Image>();
         _borderImage.color = _borderInactiveColor;
-        _borderImage.raycastTarget = false;
+        // Enemy panels: raycast target for hover detection
+        _borderImage.raycastTarget = !isLeft;
+
+        // Enemy panel hover → show/hide intent
+        if (!isLeft)
+        {
+            var trigger = gameObject.AddComponent<EventTrigger>();
+            var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enterEntry.callback.AddListener((_) => OnPanelHoverEnter());
+            trigger.triggers.Add(enterEntry);
+            var exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exitEntry.callback.AddListener((_) => OnPanelHoverExit());
+            trigger.triggers.Add(exitEntry);
+        }
 
         // Inner dark background
         var innerGo = new GameObject("Inner");
@@ -125,6 +189,10 @@ public class UnitInfoPanel : MonoBehaviour
 
         // Tooltip (hidden by default)
         BuildTooltip();
+
+        // Intent card popup (enemy panels only)
+        if (!isLeft)
+            BuildIntentPopup();
     }
 
     private void BuildAvatar(Transform parent, Color teamColor, int size)
@@ -281,6 +349,109 @@ public class UnitInfoPanel : MonoBehaviour
             _tooltipGo.SetActive(false);
     }
 
+    // ── Intent card popup ───────────────────────────────────────────────
+
+    private void BuildIntentPopup()
+    {
+        _intentGo = new GameObject("IntentPopup");
+        _intentGo.transform.SetParent(transform, false);
+
+        // Dark background
+        var bgImg = _intentGo.AddComponent<Image>();
+        bgImg.color = new Color(0.08f, 0.06f, 0.12f, 0.95f);
+        bgImg.raycastTarget = false;
+
+        var intentRect = _intentGo.GetComponent<RectTransform>();
+        // Position to the left of the enemy panel
+        intentRect.anchorMin = new Vector2(0f, 0.5f);
+        intentRect.anchorMax = new Vector2(0f, 0.5f);
+        intentRect.pivot = new Vector2(1f, 0.5f);
+        intentRect.anchoredPosition = new Vector2(-6f, 0f);
+        intentRect.sizeDelta = new Vector2(180f, 70f);
+
+        // Vertical layout inside
+        var layoutGo = new GameObject("IntentLayout");
+        layoutGo.transform.SetParent(_intentGo.transform, false);
+        var layoutRect = layoutGo.AddComponent<RectTransform>();
+        layoutRect.anchorMin = Vector2.zero;
+        layoutRect.anchorMax = Vector2.one;
+        layoutRect.offsetMin = new Vector2(8f, 4f);
+        layoutRect.offsetMax = new Vector2(-8f, -4f);
+        var vl = layoutGo.AddComponent<VerticalLayoutGroup>();
+        vl.spacing = 2;
+        vl.childAlignment = TextAnchor.MiddleLeft;
+        vl.childForceExpandWidth = true;
+        vl.childForceExpandHeight = false;
+
+        // "Next:" label
+        var headerGo = new GameObject("IntentHeader");
+        headerGo.transform.SetParent(layoutGo.transform, false);
+        var headerText = headerGo.AddComponent<Text>();
+        headerText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        headerText.fontSize = 10;
+        headerText.fontStyle = FontStyle.Normal;
+        headerText.alignment = TextAnchor.MiddleLeft;
+        headerText.color = new Color(0.6f, 0.6f, 0.7f);
+        headerText.text = "Next:";
+        headerText.raycastTarget = false;
+        var headerLe = headerGo.AddComponent<LayoutElement>();
+        headerLe.preferredHeight = 14;
+
+        // Card name (bold, orange-red)
+        var nameGo = new GameObject("IntentCardName");
+        nameGo.transform.SetParent(layoutGo.transform, false);
+        _intentCardName = nameGo.AddComponent<Text>();
+        _intentCardName.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _intentCardName.fontSize = 13;
+        _intentCardName.fontStyle = FontStyle.Bold;
+        _intentCardName.alignment = TextAnchor.MiddleLeft;
+        _intentCardName.color = new Color(1f, 0.6f, 0.3f);
+        _intentCardName.raycastTarget = false;
+        var nameLe = nameGo.AddComponent<LayoutElement>();
+        nameLe.preferredHeight = 18;
+
+        // Action list (one line per action, grey)
+        var actionsGo = new GameObject("IntentActions");
+        actionsGo.transform.SetParent(layoutGo.transform, false);
+        _intentActions = actionsGo.AddComponent<Text>();
+        _intentActions.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _intentActions.fontSize = 11;
+        _intentActions.fontStyle = FontStyle.Normal;
+        _intentActions.alignment = TextAnchor.UpperLeft;
+        _intentActions.color = new Color(0.8f, 0.8f, 0.8f);
+        _intentActions.raycastTarget = false;
+        _intentActions.verticalOverflow = VerticalWrapMode.Overflow;
+        var actionsLe = actionsGo.AddComponent<LayoutElement>();
+        actionsLe.flexibleHeight = 1;
+
+        _intentGo.SetActive(false);
+        _intentVisible = false;
+    }
+
+    private void OnPanelHoverEnter()
+    {
+        if (_unit == null || !_unit.IsAlive || _unit.Team != Team.Enemy) return;
+        _panelHovered = true;
+        ComputeAndShowIntent();
+    }
+
+    private void OnPanelHoverExit()
+    {
+        _panelHovered = false;
+        HideIntent();
+    }
+
+    private void ComputeAndShowIntent()
+    {
+        if (_unit is not EnemyUnit enemy) return;
+        var allUnits = _turnManager?.GetAliveUnits();
+        if (allUnits == null) return;
+
+        enemy.ComputeIntent(allUnits, out CardData cardData);
+        if (cardData != null)
+            ShowIntent(cardData);
+    }
+
     private void BuildPassiveSection(Transform parent, PassiveSkill passive, bool isLeft)
     {
         // Divider line
@@ -402,6 +573,7 @@ public class UnitInfoPanel : MonoBehaviour
             foreach (var kvp in _statusTexts)
                 kvp.Value.gameObject.SetActive(false);
             HideTooltip();
+            HideIntent();
             return;
         }
 

@@ -151,7 +151,13 @@ public class PlayerUnit : Unit
         _hoveredEnemy.SetChipHighlighted(true);
 
         var allAlive = _turnManager.GetAliveUnits();
-        var intents = enemy.ComputeIntent(allAlive);
+        var intents = enemy.ComputeIntent(allAlive, out CardData intentCard);
+
+        // Show intent card popup on the enemy's side panel
+        var panel = UnitInfoPanel.GetPanel(enemy);
+        if (panel != null && intentCard != null)
+            panel.ShowIntent(intentCard);
+
         foreach (var (target, effect) in intents)
         {
             if (!Grid.TryGetTile(target, out HexTile tile)) continue;
@@ -167,6 +173,10 @@ public class PlayerUnit : Unit
     {
         if (_hoveredEnemy != null)
         {
+            // Hide intent card popup on the enemy's panel
+            var panel = UnitInfoPanel.GetPanel(_hoveredEnemy);
+            panel?.HideIntent();
+
             _hoveredEnemy.SetChipHighlighted(false);
             _hoveredEnemy = null;
         }

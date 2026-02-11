@@ -253,9 +253,11 @@ public class EnemyUnit : Unit
     /// <summary>
     /// Preview what this enemy would do on its turn (same AI logic, no side effects).
     /// Returns a list of (target hex, effect type) pairs for display.
+    /// Also outputs the CardData of the chosen card (null if passing).
     /// </summary>
-    public List<(HexCoord target, CardEffect effect)> ComputeIntent(List<Unit> allUnits)
+    public List<(HexCoord target, CardEffect effect)> ComputeIntent(List<Unit> allUnits, out CardData chosenCardData)
     {
+        chosenCardData = null;
         var intents = new List<(HexCoord, CardEffect)>();
 
         Unit primaryTarget = FindPrimaryTarget(allUnits);
@@ -293,6 +295,8 @@ public class EnemyUnit : Unit
         }
 
         if (chosenCard == null) return intents;
+
+        chosenCardData = chosenCard.Data;
 
         // Preview each action's best target
         for (int i = 0; i < chosenCard.ActionCount; i++)
