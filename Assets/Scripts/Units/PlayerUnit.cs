@@ -171,10 +171,28 @@ public class PlayerUnit : Unit
 
     private void HandleCardClicked(int index)
     {
-        // Only allow card selection/deselection from Idle
-        if (_state != State.Idle) return;
-
         if (Hand == null || index < 0 || index >= Hand.Cards.Count) return;
+
+        // Allow deselect/switch only when no actions have been resolved yet
+        if (_state == State.CardSelected && _currentActionIndex == 0)
+        {
+            if (index == _selectedCardIndex)
+            {
+                // Re-click same card → deselect
+                CancelCard();
+                return;
+            }
+
+            // Click different card → switch to it (if ready)
+            var other = Hand.Cards[index];
+            if (!other.IsReady || other.ActionCount == 0) return;
+            CancelCard();
+            EnterCardSelected(other, index);
+            return;
+        }
+
+        // Only allow fresh selection from Idle
+        if (_state != State.Idle) return;
 
         var card = Hand.Cards[index];
         if (!card.IsReady)
@@ -256,16 +274,6 @@ public class PlayerUnit : Unit
         var allUnits = _turnManager.GetAliveUnits();
         var targets = _selectedCard.GetValidTargetsForAction(_currentActionIndex, this, allUnits, Grid);
 
-        if (targets.Count == 0)
-        {
-            // Auto-skip actions with no valid targets
-            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
-                      $"{Hand.DescribeAction(action)} — no valid targets, skipping.");
-            _currentActionIndex++;
-            ShowCurrentAction();
-            return;
-        }
-
         // Auto-resolve self-targeting status effects (no click needed)
         if (action.targetSelf && action.effect == CardEffect.Status)
         {
@@ -321,15 +329,27 @@ public class PlayerUnit : Unit
         _validTargets = targets;
         _validTargetSet = new HashSet<HexCoord>(targets);
         _hoveredTargetTile = null;
-        HighlightTargets(true);
 
         string desc = Hand.DescribeAction(action);
-        bool canSkip = !action.mandatory || _multiTargetRemaining > 0;
         string multiHint = _multiTargetRemaining > 0
             ? $" [target {action.maxTargets - _multiTargetRemaining + 1}/{action.maxTargets}]"
             : "";
-        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc + multiHint, canSkip);
-        string hint = canSkip ? "click a target or skip" : "click a target (mandatory)";
+
+        if (targets.Count == 0)
+        {
+            // No valid targets — show the step but only allow skip
+            bool canSkip = true;
+            _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount,
+                desc + multiHint + " (no targets)", canSkip);
+            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                      $"{desc}{multiHint} — no valid targets, click skip.");
+            return;
+        }
+
+        HighlightTargets(true);
+        bool skip = !action.mandatory || _multiTargetRemaining > 0;
+        _handUI?.ShowActionStep(_currentActionIndex + 1, _selectedCard.ActionCount, desc + multiHint, skip);
+        string hint = skip ? "click a target or skip" : "click a target (mandatory)";
         Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: {desc}{multiHint} — {hint}.");
     }
 

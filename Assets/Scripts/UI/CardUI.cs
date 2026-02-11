@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public event Action OnClicked;
+    public event Action OnSkipClicked;
 
     private Image _borderImage;
     private Image _innerImage;
@@ -26,6 +27,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private readonly System.Collections.Generic.List<Text> _actionNumTexts = new();
     private readonly System.Collections.Generic.List<Text> _actionDescTexts = new();
     private readonly System.Collections.Generic.List<Color> _actionRowBaseColors = new();
+    private readonly System.Collections.Generic.List<GameObject> _skipButtons = new();
     private int _activeStep = -1;
 
     // Card state colours
@@ -157,6 +159,46 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             descRect.offsetMin = new Vector2(48f, 0f);
             descRect.offsetMax = new Vector2(-10f, 0f);
             _actionDescTexts.Add(descTxt);
+
+            // Skip button (small circle on the right, hidden by default)
+            var skipGo = new GameObject($"Skip_{i}");
+            skipGo.transform.SetParent(rowGo.transform, false);
+            var skipImg = skipGo.AddComponent<Image>();
+            skipImg.color = new Color(0.72f, 0.28f, 0.28f);
+            var skipRect = skipGo.GetComponent<RectTransform>();
+            skipRect.anchorMin = new Vector2(1f, 0.5f);
+            skipRect.anchorMax = new Vector2(1f, 0.5f);
+            skipRect.pivot = new Vector2(1f, 0.5f);
+            skipRect.anchoredPosition = new Vector2(-8f, 0f);
+            skipRect.sizeDelta = new Vector2(32f, 32f);
+
+            var skipBtnComp = skipGo.AddComponent<Button>();
+            skipBtnComp.targetGraphic = skipImg;
+            skipBtnComp.onClick.AddListener(() => OnSkipClicked?.Invoke());
+            var sc = skipBtnComp.colors;
+            sc.normalColor = Color.white;
+            sc.highlightedColor = new Color(1.2f, 1.05f, 1.05f);
+            sc.pressedColor = new Color(0.85f, 0.85f, 0.85f);
+            skipBtnComp.colors = sc;
+
+            var skipTxtGo = new GameObject("Icon");
+            skipTxtGo.transform.SetParent(skipGo.transform, false);
+            var skipTxt = skipTxtGo.AddComponent<Text>();
+            skipTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            skipTxt.fontSize = 20;
+            skipTxt.fontStyle = FontStyle.Bold;
+            skipTxt.alignment = TextAnchor.MiddleCenter;
+            skipTxt.color = Color.white;
+            skipTxt.text = "\u2716"; // ✖
+            skipTxt.raycastTarget = false;
+            var skipTxtRect = skipTxtGo.GetComponent<RectTransform>();
+            skipTxtRect.anchorMin = Vector2.zero;
+            skipTxtRect.anchorMax = Vector2.one;
+            skipTxtRect.offsetMin = Vector2.zero;
+            skipTxtRect.offsetMax = Vector2.zero;
+
+            skipGo.SetActive(false);
+            _skipButtons.Add(skipGo);
         }
 
         // ── Cooldown overlay (hidden when ready) ──
@@ -226,7 +268,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     /// Steps before it are marked done; steps after are default.
     /// Pass -1 to clear all highlights.
     /// </summary>
-    public void SetActiveStep(int step)
+    public void SetActiveStep(int step, bool showSkip = false)
     {
         _activeStep = step;
         for (int i = 0; i < _actionRowImages.Count; i++)
@@ -255,12 +297,16 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
                 _actionNumTexts[i].text = $"{i + 1}";
                 _actionDescTexts[i].color = new Color(0.15f, 0.13f, 0.10f);
             }
+
+            // Show skip button only on the active row when allowed
+            if (i < _skipButtons.Count)
+                _skipButtons[i].SetActive(isActive && showSkip);
         }
     }
 
     public void ClearActiveStep()
     {
-        SetActiveStep(-1);
+        SetActiveStep(-1, false);
     }
 
     // ── Builders ─────────────────────────────────────────────────────────

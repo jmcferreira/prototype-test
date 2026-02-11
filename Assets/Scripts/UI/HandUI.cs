@@ -121,6 +121,7 @@ public class HandUI : MonoBehaviour
 
             int index = i; // capture for closure
             cardUI.OnClicked += () => OnCardClicked?.Invoke(index);
+            cardUI.OnSkipClicked += () => OnSkipClicked?.Invoke();
 
             _cardUIs.Add(cardUI);
         }
@@ -285,7 +286,7 @@ public class HandUI : MonoBehaviour
 
         // Highlight the active step on the selected card at the bottom
         if (_selectedCardIndex >= 0 && _selectedCardIndex < _cardUIs.Count)
-            _cardUIs[_selectedCardIndex].SetActiveStep(zeroStep);
+            _cardUIs[_selectedCardIndex].SetActiveStep(zeroStep, canSkip);
 
         // Update expanded card highlight
         UpdateExpandedStep(zeroStep, canSkip);
