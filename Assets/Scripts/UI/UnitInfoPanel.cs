@@ -182,21 +182,17 @@ public class UnitInfoPanel : MonoBehaviour
             var rowGo = new GameObject($"Status_{def.Name}");
             rowGo.transform.SetParent(containerGo.transform, false);
 
-            // Background image for raycast detection (transparent)
-            var rowImg = rowGo.AddComponent<Image>();
-            rowImg.color = Color.clear;
-            rowImg.raycastTarget = true;
-
             var rowLe = rowGo.AddComponent<LayoutElement>();
             rowLe.preferredHeight = rowHeight;
 
-            // Text: "Icon Name X"
+            // Text: "Icon Name X" — also serves as raycast target for hover
+            // (Can't put Image + Text on same GO — both are Graphic-derived)
             var stText = rowGo.AddComponent<Text>();
             stText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             stText.fontSize = fontSize;
             stText.alignment = TextAnchor.MiddleLeft;
             stText.color = def.IconColor;
-            stText.raycastTarget = false;
+            stText.raycastTarget = true;
 
             // Hover events for tooltip
             var trigger = rowGo.AddComponent<EventTrigger>();
@@ -228,7 +224,12 @@ public class UnitInfoPanel : MonoBehaviour
         _tooltipGo = new GameObject("Tooltip");
         _tooltipGo.transform.SetParent(transform, false);
 
-        var tooltipRect = _tooltipGo.AddComponent<RectTransform>();
+        // Dark background (Image also ensures RectTransform exists)
+        var bgImg = _tooltipGo.AddComponent<Image>();
+        bgImg.color = new Color(0.08f, 0.08f, 0.12f, 0.95f);
+        bgImg.raycastTarget = false;
+
+        var tooltipRect = _tooltipGo.GetComponent<RectTransform>();
         // Position to the right of the panel for left panels, left for right panels
         if (_isLeft)
         {
@@ -245,11 +246,6 @@ public class UnitInfoPanel : MonoBehaviour
             tooltipRect.anchoredPosition = new Vector2(-6f, 0f);
         }
         tooltipRect.sizeDelta = new Vector2(200f, 50f);
-
-        // Dark background
-        var bgImg = _tooltipGo.AddComponent<Image>();
-        bgImg.color = new Color(0.08f, 0.08f, 0.12f, 0.95f);
-        bgImg.raycastTarget = false;
 
         // Text
         var textGo = new GameObject("TooltipText");
