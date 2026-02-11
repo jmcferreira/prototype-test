@@ -22,6 +22,16 @@ public static class BattleLog
 
     public static IReadOnlyList<Entry> Entries => _entries;
 
+    /// <summary>
+    /// Clears all entries and subscribers. Call at start of each game session
+    /// to handle static state persisting across Unity editor play sessions.
+    /// </summary>
+    public static void Clear()
+    {
+        _entries.Clear();
+        OnEntryAdded = null;
+    }
+
     public static void AddTurnHeader(string unitName, int turnNumber)
     {
         Add(EntryType.TurnHeader, $"{unitName} - Turn {turnNumber}");

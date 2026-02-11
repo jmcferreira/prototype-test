@@ -3,11 +3,19 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Scrollable battle log panel positioned below the player info panel.
-/// Subscribes to BattleLog events and appends styled text entries.
-/// Content height is resized in LateUpdate to avoid first-frame layout issues.
+/// Uses FIXED content width (not stretch anchors) so Text.preferredHeight
+/// returns correct values immediately, without waiting for canvas layout.
 /// </summary>
 public class BattleLogUI : MonoBehaviour
 {
+    private const float PanelWidth = 286f;
+    private const float PanelHeight = 234f;
+    private const float Padding = 4f;
+    private const float HeaderHeight = 20f;
+    private const float DividerHeight = 1f;
+    // Content width = panel width minus padding on both sides
+    private const float ContentWidth = PanelWidth - Padding * 2 - 4f; // 274
+
     private Text _logText;
     private ScrollRect _scrollRect;
     private RectTransform _contentRect;
@@ -38,7 +46,7 @@ public class BattleLogUI : MonoBehaviour
         rootRect.anchorMax = new Vector2(0f, 0.5f);
         rootRect.pivot = new Vector2(0f, 1f);
         rootRect.anchoredPosition = new Vector2(12f, -81f);
-        rootRect.sizeDelta = new Vector2(286f, 234f);
+        rootRect.sizeDelta = new Vector2(PanelWidth, PanelHeight);
 
         // Dark background
         var bgImg = gameObject.AddComponent<Image>();
@@ -61,7 +69,7 @@ public class BattleLogUI : MonoBehaviour
         headerRect.anchorMax = new Vector2(1f, 1f);
         headerRect.pivot = new Vector2(0.5f, 1f);
         headerRect.anchoredPosition = Vector2.zero;
-        headerRect.sizeDelta = new Vector2(0f, 20f);
+        headerRect.sizeDelta = new Vector2(0f, HeaderHeight);
 
         // Divider under header
         var divGo = new GameObject("Divider");
@@ -73,8 +81,8 @@ public class BattleLogUI : MonoBehaviour
         divRect.anchorMin = new Vector2(0f, 1f);
         divRect.anchorMax = new Vector2(1f, 1f);
         divRect.pivot = new Vector2(0.5f, 1f);
-        divRect.anchoredPosition = new Vector2(0f, -20f);
-        divRect.sizeDelta = new Vector2(-8f, 1f);
+        divRect.anchoredPosition = new Vector2(0f, -HeaderHeight);
+        divRect.sizeDelta = new Vector2(-8f, DividerHeight);
 
         // Viewport (masked scroll area below header)
         var viewportGo = new GameObject("Viewport");
@@ -84,23 +92,33 @@ public class BattleLogUI : MonoBehaviour
         vpImg.raycastTarget = true;
         viewportGo.AddComponent<Mask>().showMaskGraphic = false;
         var vpRect = viewportGo.GetComponent<RectTransform>();
-        vpRect.anchorMin = Vector2.zero;
-        vpRect.anchorMax = Vector2.one;
-        vpRect.offsetMin = new Vector2(4f, 4f);
-        vpRect.offsetMax = new Vector2(-4f, -22f);
+        // Fixed size viewport — no stretch anchors
+        vpRect.anchorMin = new Vector2(0f, 0f);
+        vpRect.anchorMax = new Vector2(0f, 0f);
+        vpRect.pivot = new Vector2(0f, 0f);
+        vpRect.anchoredPosition = new Vector2(Padding, Padding);
+        vpRect.sizeDelta = new Vector2(ContentWidth, PanelHeight - HeaderHeight - DividerHeight - Padding * 2);
 
-        // Content rect: stretches full width, height grown manually
+        // Content rect: FIXED width, height grows with text
         var contentGo = new GameObject("Content");
         contentGo.transform.SetParent(viewportGo.transform, false);
         _contentRect = contentGo.AddComponent<RectTransform>();
         _contentRect.anchorMin = new Vector2(0f, 1f);
-        _contentRect.anchorMax = new Vector2(1f, 1f);
+        _contentRect.anchorMax = new Vector2(0f, 1f);
         _contentRect.pivot = new Vector2(0f, 1f);
         _contentRect.anchoredPosition = Vector2.zero;
-        _contentRect.sizeDelta = new Vector2(0f, 0f);
+        _contentRect.sizeDelta = new Vector2(ContentWidth, 0f);
 
-        // Text lives on the content GO — renders all log entries
-        _logText = contentGo.AddComponent<Text>();
+        // Text on a child GO — stretches to fill the fixed-width content rect
+        var textGo = new GameObject("LogText");
+        textGo.transform.SetParent(contentGo.transform, false);
+        var textRect = textGo.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        _logText = textGo.AddComponent<Text>();
         _logText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         _logText.fontSize = 12;
         _logText.alignment = TextAnchor.UpperLeft;
@@ -149,19 +167,19 @@ public class BattleLogUI : MonoBehaviour
         _dirty = true;
     }
 
-    /// <summary>
-    /// Resize content to fit text and auto-scroll.
-    /// Done in LateUpdate so the canvas layout pass has already resolved
-    /// all rect widths — Text.preferredHeight then returns the correct value.
-    /// </summary>
     private void LateUpdate()
     {
         if (!_dirty) return;
         _dirty = false;
 
-        // preferredHeight uses the Text's current rect width (set by anchors)
-        float h = _logText.preferredHeight + 4f;
-        _contentRect.sizeDelta = new Vector2(0f, h);
+        // Calculate height using TextGenerator with explicit width.
+        // This works even before canvas layout resolves because we use
+        // a fixed ContentWidth rather than relying on rect resolution.
+        var settings = _logText.GetGenerationSettings(new Vector2(ContentWidth, 0f));
+        settings.scaleFactor = 1f; // GetGenerationSettings multiplies by canvas scale; reset to 1
+        var gen = _logText.cachedTextGenerator;
+        float h = gen.GetPreferredHeight(_logText.text, settings) + Padding;
+        _contentRect.sizeDelta = new Vector2(ContentWidth, h);
 
         // Scroll to bottom
         _scrollRect.verticalNormalizedPosition = 0f;

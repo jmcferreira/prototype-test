@@ -26,6 +26,9 @@ public class GameSetup : MonoBehaviour
 
     private void Setup()
     {
+        // Clear static state from previous play sessions
+        BattleLog.Clear();
+
         // --- Player ---
         var playerCoord = new HexCoord(1, 1);
         var playerGo = new GameObject();
