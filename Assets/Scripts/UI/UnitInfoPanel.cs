@@ -39,6 +39,10 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private bool _intentVisible;
     private bool _panelHovered;
 
+    // Events for hex intent highlighting (PlayerUnit subscribes)
+    public static event System.Action<EnemyUnit> OnEnemyPanelHoverEnter;
+    public static event System.Action<EnemyUnit> OnEnemyPanelHoverExit;
+
     private Color _borderActiveColor;
     private Color _borderInactiveColor;
     private static readonly Color DeceasedBorderColor = new Color(0.25f, 0.25f, 0.25f, 0.85f);
@@ -77,11 +81,13 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     {
         transform.localScale = Vector3.one * 1.3f;
 
-        // For enemy panels, also show intent
+        // For enemy panels, also show intent + fire event for hex highlighting
         if (!_isLeft && _unit != null && _unit.IsAlive && _unit.Team == Team.Enemy)
         {
             _panelHovered = true;
             ComputeAndShowIntent();
+            if (_unit is EnemyUnit eu)
+                OnEnemyPanelHoverEnter?.Invoke(eu);
         }
     }
 
@@ -93,6 +99,8 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         {
             _panelHovered = false;
             HideIntent();
+            if (_unit is EnemyUnit eu)
+                OnEnemyPanelHoverExit?.Invoke(eu);
         }
     }
 

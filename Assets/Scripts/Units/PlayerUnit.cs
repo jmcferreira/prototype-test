@@ -28,8 +28,9 @@ public class PlayerUnit : Unit
     private int _multiTargetRemaining;
     private HashSet<HexCoord> _multiTargetExclude = new();
 
-    // Enemy intent hover
+    // Enemy intent hover (chip or panel)
     private EnemyUnit _hoveredEnemy;
+    private EnemyUnit _panelHoverEnemy;
     private readonly List<(HexCoord target, HexTile tile)> _intentTiles = new();
 
     // Intent colours
@@ -39,6 +40,18 @@ public class PlayerUnit : Unit
     public void InitHand(CardData[] cardDatas)
     {
         Hand = new Hand(cardDatas);
+    }
+
+    private void OnEnable()
+    {
+        UnitInfoPanel.OnEnemyPanelHoverEnter += HandlePanelHoverEnter;
+        UnitInfoPanel.OnEnemyPanelHoverExit += HandlePanelHoverExit;
+    }
+
+    private void OnDisable()
+    {
+        UnitInfoPanel.OnEnemyPanelHoverEnter -= HandlePanelHoverEnter;
+        UnitInfoPanel.OnEnemyPanelHoverExit -= HandlePanelHoverExit;
     }
 
     public void SetHexInteraction(HexInteraction hexInteraction)
@@ -75,6 +88,7 @@ public class PlayerUnit : Unit
 
     public override void OnTurnEnd()
     {
+        _panelHoverEnemy = null;
         ClearIntentHover();
         ClearTargetHover();
         ClearHighlights();
@@ -120,8 +134,48 @@ public class PlayerUnit : Unit
         _handUI?.HideActionStep();
     }
 
+    // ── Panel hover handlers ────────────────────────────────────────────
+
+    private void HandlePanelHoverEnter(EnemyUnit enemy)
+    {
+        if (_state != State.Idle) return;
+        if (!enemy.IsAlive) return;
+
+        // Clear any existing chip-based hover
+        ClearIntentHover();
+
+        _panelHoverEnemy = enemy;
+        _hoveredEnemy = enemy;
+        _hoveredEnemy.SetChipHighlighted(true);
+
+        // Show hex intent highlights (intent popup is already shown by UnitInfoPanel)
+        var allAlive = _turnManager.GetAliveUnits();
+        var intents = enemy.ComputeIntent(allAlive, out _);
+
+        foreach (var (target, effect) in intents)
+        {
+            if (!Grid.TryGetTile(target, out HexTile tile)) continue;
+            bool isMove = effect == CardEffect.Move || effect == CardEffect.Dash || effect == CardEffect.Jump;
+            Color color = isMove ? IntentMove : IntentAttack;
+            tile.SetIntentHighlight(true, color);
+            _intentTiles.Add((target, tile));
+        }
+    }
+
+    private void HandlePanelHoverExit(EnemyUnit enemy)
+    {
+        if (_panelHoverEnemy != enemy) return;
+        _panelHoverEnemy = null;
+        ClearIntentHover();
+    }
+
+    // ── Chip hover ──────────────────────────────────────────────────────
+
     private void UpdateEnemyIntentHover()
     {
+        // If panel hover is active, don't override with chip-based hover
+        if (_panelHoverEnemy != null) return;
+
         var tileUnderMouse = _hexInteraction?.GetTileUnderMouse();
         EnemyUnit enemy = null;
 
