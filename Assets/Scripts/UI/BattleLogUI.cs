@@ -28,15 +28,17 @@ public class BattleLogUI : MonoBehaviour
 
     private void BuildUI()
     {
-        // Root panel: anchored below the player panel on the left
+        // Root panel: anchored below the player panel on the left.
+        // Player panel: anchor (0, 0.5), pivot (0, 0.5), y=80, height=310.
+        // Player panel bottom edge is at y = 80 - 155 = -75 from center-left.
         var rootRect = gameObject.AddComponent<RectTransform>();
-        rootRect.anchorMin = new Vector2(0f, 0f);
-        rootRect.anchorMax = new Vector2(0f, 0f);
-        rootRect.pivot = new Vector2(0f, 0f);
-        rootRect.anchoredPosition = new Vector2(12f, 12f);
-        rootRect.sizeDelta = new Vector2(220f, 180f);
+        rootRect.anchorMin = new Vector2(0f, 0.5f);
+        rootRect.anchorMax = new Vector2(0f, 0.5f);
+        rootRect.pivot = new Vector2(0f, 1f); // top-left pivot to hang below
+        rootRect.anchoredPosition = new Vector2(12f, -81f); // 6px gap below player panel bottom
+        rootRect.sizeDelta = new Vector2(286f, 234f);
 
-        // Dark background with border
+        // Dark background
         var bgImg = gameObject.AddComponent<Image>();
         bgImg.color = new Color(0.07f, 0.07f, 0.1f, 0.9f);
         bgImg.raycastTarget = true;
@@ -92,7 +94,7 @@ public class BattleLogUI : MonoBehaviour
         // Mask for clipping
         scrollGo.AddComponent<Mask>().showMaskGraphic = false;
 
-        // Content container (grows vertically)
+        // Content container (grows vertically as text is added)
         var contentGo = new GameObject("Content");
         contentGo.transform.SetParent(scrollGo.transform, false);
         _contentRect = contentGo.AddComponent<RectTransform>();
@@ -110,24 +112,23 @@ public class BattleLogUI : MonoBehaviour
         vl.childAlignment = TextAnchor.UpperLeft;
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
-        vl.padding = new RectOffset(2, 2, 2, 2);
+        vl.padding = new RectOffset(4, 4, 2, 2);
 
         _scrollRect.content = _contentRect;
 
-        // Log text — we use a single Text component for all entries for simplicity
+        // Single Text component for all log entries (rich text for styling)
         var textGo = new GameObject("LogText");
         textGo.transform.SetParent(contentGo.transform, false);
         _logText = textGo.AddComponent<Text>();
         _logText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _logText.fontSize = 11;
+        _logText.fontSize = 12;
         _logText.alignment = TextAnchor.UpperLeft;
         _logText.color = new Color(0.8f, 0.8f, 0.8f);
         _logText.raycastTarget = false;
+        _logText.supportRichText = true;
         _logText.horizontalOverflow = HorizontalWrapMode.Wrap;
         _logText.verticalOverflow = VerticalWrapMode.Overflow;
         _logText.text = "";
-        var textLe = textGo.AddComponent<LayoutElement>();
-        textLe.flexibleWidth = 1;
     }
 
     private void OnEntry(BattleLog.Entry entry)
@@ -143,7 +144,7 @@ public class BattleLogUI : MonoBehaviour
         switch (entry.Type)
         {
             case BattleLog.EntryType.TurnHeader:
-                // Add blank line separator before turn headers (except first)
+                // Blank line before turn headers (except first)
                 string sep = _logText.text.Length > 0 ? "\n" : "";
                 line = $"{sep}<color=#8888cc><b>{entry.Text}</b></color>";
                 break;
@@ -157,8 +158,8 @@ public class BattleLogUI : MonoBehaviour
 
         _logText.text += (_logText.text.Length > 0 ? "\n" : "") + line;
 
-        // Auto-scroll to bottom
-        Canvas.ForceUpdateCanvases();
+        // Force layout rebuild so ContentSizeFitter recalculates, then scroll
+        LayoutRebuilder.ForceRebuildLayoutImmediate(_contentRect);
         _scrollRect.verticalNormalizedPosition = 0f;
     }
 }
