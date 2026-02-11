@@ -21,6 +21,13 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private GameObject _cdOverlayGo;
     private Text _cdNumberText;
 
+    // Action row references for step highlighting
+    private readonly System.Collections.Generic.List<Image> _actionRowImages = new();
+    private readonly System.Collections.Generic.List<Text> _actionNumTexts = new();
+    private readonly System.Collections.Generic.List<Text> _actionDescTexts = new();
+    private readonly System.Collections.Generic.List<Color> _actionRowBaseColors = new();
+    private int _activeStep = -1;
+
     // Card state colours
     private static readonly Color BorderReady    = new Color(0.65f, 0.55f, 0.35f);
     private static readonly Color BorderHover    = new Color(0.82f, 0.72f, 0.45f);
@@ -31,6 +38,14 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private static readonly Color InnerCooldown = new Color(0.38f, 0.38f, 0.38f);
 
     private static readonly Color HeaderBg = new Color(0.18f, 0.16f, 0.12f);
+
+    // Step highlight colours (on the card itself)
+    private static readonly Color RowActive     = new Color(0.30f, 0.55f, 0.90f, 0.85f);
+    private static readonly Color RowDone       = new Color(0.25f, 0.45f, 0.25f, 0.60f);
+    private static readonly Color NumActive     = Color.white;
+    private static readonly Color DescActive    = Color.white;
+    private static readonly Color NumDone       = new Color(0.70f, 0.85f, 0.70f);
+    private static readonly Color DescDone      = new Color(0.70f, 0.85f, 0.70f);
 
     private static readonly Vector3 NormalScale = new Vector3(0.7f, 0.7f, 1f);
     private static readonly Vector3 HoverScale  = Vector3.one;
@@ -105,12 +120,15 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             var rowGo = new GameObject($"Action_{i}");
             rowGo.transform.SetParent(innerGo.transform, false);
             var rowImg = rowGo.AddComponent<Image>();
-            rowImg.color = (i % 2 == 0)
+            Color baseRowColor = (i % 2 == 0)
                 ? new Color(0.92f, 0.89f, 0.80f)
                 : new Color(0.88f, 0.85f, 0.76f);
+            rowImg.color = baseRowColor;
             rowImg.raycastTarget = false;
             var rowLe = rowGo.AddComponent<LayoutElement>();
             rowLe.preferredHeight = 58f;
+            _actionRowImages.Add(rowImg);
+            _actionRowBaseColors.Add(baseRowColor);
 
             // Step number (left badge)
             var numGo = new GameObject("Num");
@@ -129,6 +147,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             numRect.pivot = new Vector2(0f, 0.5f);
             numRect.anchoredPosition = new Vector2(10f, 0f);
             numRect.sizeDelta = new Vector2(32f, 0f);
+            _actionNumTexts.Add(numTxt);
 
             // Action description
             var descTxt = CreateFillText(rowGo.transform, "Desc", 24, FontStyle.Normal,
@@ -137,6 +156,7 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             var descRect = descTxt.GetComponent<RectTransform>();
             descRect.offsetMin = new Vector2(48f, 0f);
             descRect.offsetMax = new Vector2(-10f, 0f);
+            _actionDescTexts.Add(descTxt);
         }
 
         // ── Cooldown overlay (hidden when ready) ──
@@ -197,6 +217,50 @@ public class CardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         // Scale pop on hover
         transform.localScale = (_hovered && _isReady) ? HoverScale : NormalScale;
+    }
+
+    // ── Step highlighting ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Highlight the given action step (0-indexed) on the card.
+    /// Steps before it are marked done; steps after are default.
+    /// Pass -1 to clear all highlights.
+    /// </summary>
+    public void SetActiveStep(int step)
+    {
+        _activeStep = step;
+        for (int i = 0; i < _actionRowImages.Count; i++)
+        {
+            bool isActive = (i == step);
+            bool isDone = (step >= 0 && i < step);
+
+            if (isActive)
+            {
+                _actionRowImages[i].color = RowActive;
+                _actionNumTexts[i].color = NumActive;
+                _actionNumTexts[i].text = "\u25B6"; // ▶
+                _actionDescTexts[i].color = DescActive;
+            }
+            else if (isDone)
+            {
+                _actionRowImages[i].color = RowDone;
+                _actionNumTexts[i].color = NumDone;
+                _actionNumTexts[i].text = "\u2713"; // ✓
+                _actionDescTexts[i].color = DescDone;
+            }
+            else
+            {
+                _actionRowImages[i].color = _actionRowBaseColors[i];
+                _actionNumTexts[i].color = new Color(0.45f, 0.40f, 0.30f);
+                _actionNumTexts[i].text = $"{i + 1}";
+                _actionDescTexts[i].color = new Color(0.15f, 0.13f, 0.10f);
+            }
+        }
+    }
+
+    public void ClearActiveStep()
+    {
+        SetActiveStep(-1);
     }
 
     // ── Builders ─────────────────────────────────────────────────────────

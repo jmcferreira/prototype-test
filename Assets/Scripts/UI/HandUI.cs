@@ -18,8 +18,9 @@ public class HandUI : MonoBehaviour
 
     private readonly List<CardUI> _cardUIs = new();
     private Canvas _canvas;
+    private int _selectedCardIndex = -1;
 
-    // Old action step label (kept hidden — replaced by expanded card)
+    // Action step bar (above cards — shows current action description + skip)
     private GameObject _actionStepGo;
     private Text _actionStepText;
     private GameObject _skipButtonGo;
@@ -162,7 +163,7 @@ public class HandUI : MonoBehaviour
 
     private void BuildActionStepUI()
     {
-        // Kept for backwards compat but hidden — expanded card replaces this
+        // Action step bar — sits just above the card strip
         _actionStepGo = new GameObject("ActionStep");
         _actionStepGo.transform.SetParent(transform, false);
 
@@ -170,10 +171,16 @@ public class HandUI : MonoBehaviour
         stepRect.anchorMin = new Vector2(0.5f, 0f);
         stepRect.anchorMax = new Vector2(0.5f, 0f);
         stepRect.pivot = new Vector2(0.5f, 0f);
-        stepRect.anchoredPosition = new Vector2(0f, 250f);
+        stepRect.anchoredPosition = new Vector2(0f, 225f); // just above the 220px background
+
+        // Semi-transparent dark background
+        var bgImg = _actionStepGo.AddComponent<Image>();
+        bgImg.color = new Color(0.10f, 0.14f, 0.28f, 0.92f);
+        bgImg.raycastTarget = false;
 
         var stepLayout = _actionStepGo.AddComponent<HorizontalLayoutGroup>();
-        stepLayout.spacing = 14;
+        stepLayout.spacing = 12;
+        stepLayout.padding = new RectOffset(16, 16, 6, 6);
         stepLayout.childAlignment = TextAnchor.MiddleCenter;
         stepLayout.childForceExpandWidth = false;
         stepLayout.childForceExpandHeight = false;
@@ -182,35 +189,45 @@ public class HandUI : MonoBehaviour
         stepFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         stepFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+        // Step description label
         var labelGo = new GameObject("Label");
         labelGo.transform.SetParent(_actionStepGo.transform, false);
         _actionStepText = labelGo.AddComponent<Text>();
         _actionStepText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        _actionStepText.fontSize = 24;
+        _actionStepText.fontSize = 22;
         _actionStepText.alignment = TextAnchor.MiddleCenter;
-        _actionStepText.color = Color.white;
+        _actionStepText.color = new Color(0.95f, 0.92f, 0.80f);
+        _actionStepText.fontStyle = FontStyle.Bold;
         var labelLe = labelGo.AddComponent<LayoutElement>();
-        labelLe.preferredHeight = 40;
+        labelLe.preferredHeight = 36;
 
+        // Skip button
         _skipButtonGo = new GameObject("SkipButton");
         _skipButtonGo.transform.SetParent(_actionStepGo.transform, false);
 
         var skipLe = _skipButtonGo.AddComponent<LayoutElement>();
-        skipLe.preferredWidth = 100;
-        skipLe.preferredHeight = 40;
+        skipLe.preferredWidth = 90;
+        skipLe.preferredHeight = 36;
 
         var skipBg = _skipButtonGo.AddComponent<Image>();
-        skipBg.color = new Color(0.7f, 0.55f, 0.55f);
+        skipBg.color = new Color(0.65f, 0.35f, 0.35f);
 
         var skipBtn = _skipButtonGo.AddComponent<Button>();
         skipBtn.targetGraphic = skipBg;
         skipBtn.onClick.AddListener(() => OnSkipClicked?.Invoke());
 
+        var skipColors = skipBtn.colors;
+        skipColors.normalColor = Color.white;
+        skipColors.highlightedColor = new Color(1.15f, 1.05f, 1.05f);
+        skipColors.pressedColor = new Color(0.85f, 0.85f, 0.85f);
+        skipBtn.colors = skipColors;
+
         var skipTextGo = new GameObject("Text");
         skipTextGo.transform.SetParent(_skipButtonGo.transform, false);
         var skipText = skipTextGo.AddComponent<Text>();
         skipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        skipText.fontSize = 20;
+        skipText.fontSize = 18;
+        skipText.fontStyle = FontStyle.Bold;
         skipText.alignment = TextAnchor.MiddleCenter;
         skipText.color = Color.white;
         skipText.text = "Skip";
@@ -243,6 +260,12 @@ public class HandUI : MonoBehaviour
     /// </summary>
     public void SetSelectedCard(int index)
     {
+        // Clear step highlights on previous card
+        if (_selectedCardIndex >= 0 && _selectedCardIndex < _cardUIs.Count)
+            _cardUIs[_selectedCardIndex].ClearActiveStep();
+
+        _selectedCardIndex = index;
+
         for (int i = 0; i < _cardUIs.Count; i++)
             _cardUIs[i].SetSelected(i == index);
 
@@ -257,17 +280,35 @@ public class HandUI : MonoBehaviour
     /// </summary>
     public void ShowActionStep(int step, int total, string description, bool canSkip = true)
     {
-        // Update expanded card highlight (step is 1-indexed, convert to 0-indexed)
-        UpdateExpandedStep(step - 1, canSkip);
+        int zeroStep = step - 1;
+
+        // Highlight the active step on the selected card at the bottom
+        if (_selectedCardIndex >= 0 && _selectedCardIndex < _cardUIs.Count)
+            _cardUIs[_selectedCardIndex].SetActiveStep(zeroStep);
+
+        // Update expanded card highlight
+        UpdateExpandedStep(zeroStep, canSkip);
+
+        // Show the action step bar above the cards
+        if (_actionStepGo != null)
+        {
+            _actionStepGo.SetActive(true);
+            _actionStepText.text = $"Step {step}/{total}: {description}";
+            _skipButtonGo.SetActive(canSkip);
+        }
     }
 
     /// <summary>
-    /// Hide the action step indicator.
+    /// Hide the action step indicator and clear card step highlights.
     /// </summary>
     public void HideActionStep()
     {
         if (_actionStepGo != null)
             _actionStepGo.SetActive(false);
+
+        // Clear step highlight on the selected card
+        if (_selectedCardIndex >= 0 && _selectedCardIndex < _cardUIs.Count)
+            _cardUIs[_selectedCardIndex].ClearActiveStep();
     }
 
     // ── Expanded Card Panel ────────────────────────────────────────────
