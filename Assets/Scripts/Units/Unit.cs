@@ -20,6 +20,9 @@ public abstract class Unit : MonoBehaviour
     /// <summary>Fired when HP or statuses change. UI panels subscribe to this.</summary>
     public event Action OnChanged;
 
+    /// <summary>Fired once when this unit is defeated (HP reaches 0). Passes this unit.</summary>
+    public event Action<Unit> OnDefeated;
+
     // --- Passive skill ---
     public PassiveSkill Passive { get; private set; }
 
@@ -30,6 +33,11 @@ public abstract class Unit : MonoBehaviour
     private HexGrid _grid;
     private float _hexSize;
 
+    /// <summary>XP awarded to the player when this unit is defeated.</summary>
+    public int XPReward { get; private set; }
+    /// <summary>Gold value of the loot token dropped on defeat.</summary>
+    public int GoldReward { get; private set; }
+
     // Chip visual references for hover highlight
     private Material _rimMat;
     private Color _rimBaseColor;
@@ -37,7 +45,7 @@ public abstract class Unit : MonoBehaviour
     // --- Status effects ---
     private readonly Dictionary<StatusEffectType, int> _statuses = new();
 
-    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null, int maxHP = 3, string acronym = null)
+    public void Init(Team team, HexCoord startCoord, HexGrid grid, string displayName = null, int maxHP = 3, string acronym = null, int xpReward = 0, int goldReward = 0)
     {
         Team = team;
         DisplayName = displayName ?? team.ToString();
@@ -45,6 +53,8 @@ public abstract class Unit : MonoBehaviour
         _hexSize = grid.HexSize;
         MaxHP = maxHP;
         HP = maxHP;
+        XPReward = xpReward;
+        GoldReward = goldReward;
         Coord = startCoord;
         PlaceAt(startCoord);
         gameObject.name = DisplayName;
@@ -135,7 +145,10 @@ public abstract class Unit : MonoBehaviour
         if (damage > 0)
             SpawnDamageNumber(damage);
         if (HP <= 0)
+        {
             HideVisuals();
+            OnDefeated?.Invoke(this);
+        }
         NotifyChanged();
     }
 

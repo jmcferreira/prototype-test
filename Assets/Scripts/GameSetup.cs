@@ -28,6 +28,7 @@ public class GameSetup : MonoBehaviour
     {
         // Clear static state from previous play sessions
         BattleLog.Clear();
+        CurrencyManager.Clear();
 
         // --- Player ---
         var playerCoord = new HexCoord(1, 1);
@@ -46,22 +47,22 @@ public class GameSetup : MonoBehaviour
         var spiderCards = CreateSpiderCards();
         var orcCards = CreateOrcCards();
 
-        // Spider 1
+        // Spider 1 (2 XP, 1 Gold loot)
         var spider1Go = new GameObject();
         var spider1 = spider1Go.AddComponent<EnemyUnit>();
-        spider1.Init(Team.Enemy, new HexCoord(4, 0), hexGrid, "Spider 1", 3, "S");
+        spider1.Init(Team.Enemy, new HexCoord(4, 0), hexGrid, "Spider 1", 3, "S", xpReward: 2, goldReward: 1);
         spider1.InitCards(spiderCards);
 
-        // Spider 2
+        // Spider 2 (2 XP, 1 Gold loot)
         var spider2Go = new GameObject();
         var spider2 = spider2Go.AddComponent<EnemyUnit>();
-        spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3, "S");
+        spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3, "S", xpReward: 2, goldReward: 1);
         spider2.InitCards(CreateSpiderCards()); // separate instances
 
-        // Orc
+        // Orc (4 XP, 2 Gold loot)
         var orcGo = new GameObject();
         var orc = orcGo.AddComponent<EnemyUnit>();
-        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6, "O");
+        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6, "O", xpReward: 4, goldReward: 2);
         orc.InitCards(orcCards);
 
         // --- Passive skills ---
@@ -73,6 +74,34 @@ public class GameSetup : MonoBehaviour
         // --- Token manager ---
         var tokenManagerGo = new GameObject("TokenManager");
         tokenManagerGo.AddComponent<TokenManager>();
+
+        // --- Enemy defeat: XP reward + loot drop ---
+        var allEnemies = new EnemyUnit[] { spider1, spider2, orc };
+        foreach (var enemy in allEnemies)
+        {
+            var e = enemy; // capture for closure
+            e.OnDefeated += (unit) =>
+            {
+                // Grant XP
+                if (unit.XPReward > 0)
+                {
+                    CurrencyManager.AddXP(unit.XPReward);
+                    BattleLog.AddAction($"Gained {unit.XPReward} XP");
+                    Debug.Log($"{unit.DisplayName} defeated — gained {unit.XPReward} XP");
+                }
+                // Drop loot token at death location
+                if (unit.GoldReward > 0 && TokenManager.Instance != null)
+                {
+                    var loot = new LootToken(unit.GoldReward);
+                    TokenManager.Instance.PlaceToken(loot, unit.Coord, hexGrid);
+                    BattleLog.AddAction($"{unit.DisplayName} dropped {unit.GoldReward} Gold loot");
+                    Debug.Log($"{unit.DisplayName} dropped loot worth {unit.GoldReward} Gold at {unit.Coord}");
+                }
+            };
+        }
+
+        // --- Initial loot tokens (5 Gold spread across the map) ---
+        SpawnInitialLoot(hexGrid, player, allEnemies);
 
         // --- HexInteraction ---
         var interactionGo = new GameObject("HexInteraction");
@@ -142,6 +171,12 @@ public class GameSetup : MonoBehaviour
         var battleLogUI = battleLogGo.AddComponent<BattleLogUI>();
         battleLogUI.Init();
 
+        // Currency display (top-left)
+        var currencyGo = new GameObject("CurrencyUI");
+        currencyGo.transform.SetParent(uiGo.transform, false);
+        var currencyUI = currencyGo.AddComponent<CurrencyUI>();
+        currencyUI.Init();
+
         // --- Start the game ---
         var turnOrder = new List<Unit> { player, spider1, spider2, orc };
         turnManager.Begin(turnOrder);
@@ -151,6 +186,57 @@ public class GameSetup : MonoBehaviour
             Camera.main.gameObject.AddComponent<CameraController>();
 
         Debug.Log($"Player at {playerCoord}, Spider 1 at (4,0), Spider 2 at (5,-1), Orc at (3,3)");
+    }
+
+    // ── Initial loot placement ─────────────────────────────────────────
+
+    /// <summary>
+    /// Scatter loot tokens worth a total of 5 Gold across random empty hexes.
+    /// Avoids hexes occupied by units or existing tokens.
+    /// </summary>
+    private static void SpawnInitialLoot(HexGrid grid, Unit player, EnemyUnit[] enemies)
+    {
+        // Collect occupied hexes (units)
+        var occupied = new HashSet<HexCoord> { player.Coord };
+        foreach (var e in enemies)
+            occupied.Add(e.Coord);
+
+        // Build list of candidate hexes
+        var candidates = new List<HexCoord>();
+        foreach (var kvp in grid.Tiles)
+        {
+            if (!occupied.Contains(kvp.Key))
+                candidates.Add(kvp.Key);
+        }
+
+        // Shuffle candidates
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        // Place loot tokens totalling 5 Gold: mix of 1-Gold and 2-Gold tokens
+        int goldRemaining = 5;
+        int placed = 0;
+        while (goldRemaining > 0 && placed < candidates.Count)
+        {
+            var coord = candidates[placed];
+            if (TokenManager.Instance.HasToken(coord))
+            {
+                placed++;
+                continue;
+            }
+
+            // Alternate 1 and 2 Gold tokens for variety
+            int value = goldRemaining >= 2 && placed % 2 == 0 ? 2 : 1;
+            if (value > goldRemaining) value = goldRemaining;
+
+            var loot = new LootToken(value);
+            TokenManager.Instance.PlaceToken(loot, coord, grid);
+            goldRemaining -= value;
+            placed++;
+        }
     }
 
     // ── Default card definitions ────────────────────────────────────────

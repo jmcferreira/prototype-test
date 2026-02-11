@@ -29,6 +29,34 @@ public abstract class HexToken
 }
 
 /// <summary>
+/// Loot token: when the player walks over it, gain Gold.
+/// Dropped by defeated enemies and spawned at game start.
+/// </summary>
+public class LootToken : HexToken
+{
+    public int GoldValue { get; }
+
+    public LootToken(int goldValue)
+        : base("Loot", $"{goldValue} Gold",
+               new Color(1f, 0.75f, 0.15f, 0.95f), null)
+    {
+        GoldValue = goldValue;
+    }
+
+    public override bool OnUnitEnter(Unit unit, List<Unit> allUnits)
+    {
+        // Only the player picks up loot
+        if (unit.Team != Team.Player) return false;
+        if (!unit.IsAlive) return false;
+
+        CurrencyManager.AddGold(GoldValue);
+        Debug.Log($"  Loot: {unit.DisplayName} picked up {GoldValue} Gold!");
+        BattleLog.AddAction($"Picked up {GoldValue} Gold");
+        return true; // consume the token
+    }
+}
+
+/// <summary>
 /// Web token: When an enemy (relative to the token owner) moves into this hex,
 /// apply Root 1 and immediately stop their movement.
 /// </summary>
