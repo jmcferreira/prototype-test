@@ -37,7 +37,9 @@ public class PullResolver : ICardResolver
         int pullDir = GetDirectionToward(enemy.Coord, caster.Coord);
         HexCoord dest = WalkDirection(enemy.Coord, pullDir, action.pushDistance, enemy, allUnits, grid);
 
-        Debug.Log($"Pull: {enemy.DisplayName} pulled {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
+        int pullDist = enemy.Coord.DistanceTo(dest);
+        Debug.Log($"Pull: {enemy.DisplayName} pulled {pullDist} hex(es) from {enemy.Coord} to {dest}.");
+        BattleLog.AddAction($"Pull {enemy.DisplayName} {pullDist} hex(es)");
         enemy.ForceMoveTo(dest);
         TokenManager.Instance?.OnUnitEnterHex(enemy, dest, allUnits);
     }

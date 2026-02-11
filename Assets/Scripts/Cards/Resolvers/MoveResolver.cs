@@ -46,7 +46,9 @@ public class MoveResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
+        int dist = caster.Coord.DistanceTo(target);
         Debug.Log($"Move: {caster.DisplayName} moved to {target}.");
+        BattleLog.AddAction($"Move {dist}");
         caster.ForceMoveTo(target);
         caster.NotifyMoved();
         TokenManager.Instance?.OnUnitEnterHex(caster, target, allUnits);

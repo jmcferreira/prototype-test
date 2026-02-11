@@ -16,6 +16,9 @@ public static class StatusEffectDefs
         /// <summary>Display name shown in UI and logs.</summary>
         public string Name;
 
+        /// <summary>Short description for tooltip.</summary>
+        public string Description;
+
         /// <summary>Unicode character used as icon on the unit info panel.</summary>
         public string Icon;
 
@@ -51,6 +54,7 @@ public static class StatusEffectDefs
             StatusEffectType.Burn, new Def
             {
                 Name = "Burn",
+                Description = "Consumed when hit by an attack. Adds bonus damage equal to stacks.",
                 Icon = "\u25B2",                            // ▲ flame-like triangle
                 IconColor = new Color(1f, 0.5f, 0f),       // orange
                 MaxStacks = 5,
@@ -64,6 +68,7 @@ public static class StatusEffectDefs
             StatusEffectType.Poison, new Def
             {
                 Name = "Poison",
+                Description = "Deals 1 damage and +1 cooldown on a random card at end of turn. Decays 1/turn.",
                 Icon = "\u25CF",                            // ● droplet-like circle
                 IconColor = new Color(0.2f, 0.85f, 0.2f),  // green
                 MaxStacks = 5,
@@ -79,6 +84,7 @@ public static class StatusEffectDefs
             StatusEffectType.Blind, new Def
             {
                 Name = "Blind",
+                Description = "Cannot target enemies with attacks. Wears off after 1 turn.",
                 Icon = "\u25C9",                            // ◉ eye-like fisheye
                 IconColor = new Color(0.7f, 0.5f, 0.9f),   // purple
                 MaxStacks = 1,
@@ -92,6 +98,7 @@ public static class StatusEffectDefs
             StatusEffectType.Swift, new Def
             {
                 Name = "Swift",
+                Description = "Adds bonus movement range equal to stacks. Decays 1/turn.",
                 Icon = "\u2192",                            // → arrow
                 IconColor = new Color(1f, 0.85f, 0.2f),    // yellow
                 MaxStacks = 3,
@@ -105,6 +112,7 @@ public static class StatusEffectDefs
             StatusEffectType.Root, new Def
             {
                 Name = "Root",
+                Description = "Cannot move, dash, or jump. Decays 1/turn.",
                 Icon = "\u2A02",                            // ⊗ cross-circle
                 IconColor = new Color(0.55f, 0.35f, 0.15f), // brown
                 MaxStacks = 3,
@@ -118,6 +126,7 @@ public static class StatusEffectDefs
             StatusEffectType.Strength, new Def
             {
                 Name = "Strength",
+                Description = "Consumed on next attack. Adds bonus damage equal to stacks.",
                 Icon = "\u2694",                            // ⚔ crossed swords
                 IconColor = new Color(1f, 0.35f, 0.35f),   // red
                 MaxStacks = 5,

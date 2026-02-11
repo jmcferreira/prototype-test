@@ -17,5 +17,6 @@ public class ReduceCooldownResolver : ICardResolver
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
         caster.ReduceCardCooldown(action.targetCardIndex, 1);
+        BattleLog.AddAction("Haste -1 CD");
     }
 }

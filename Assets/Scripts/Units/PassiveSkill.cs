@@ -37,6 +37,7 @@ public class SetupPassive : PassiveSkill
 
         owner.ApplyStatus(StatusEffectType.Strength, 1);
         Debug.Log($"  Passive [{Name}]: {owner.DisplayName} gains Strength +1.");
+        BattleLog.AddAction($"Setup: Strength +1");
         return true;
     }
 }
@@ -57,6 +58,7 @@ public class WarcryPassive : PassiveSkill
             if (unit == owner || unit.Team != owner.Team || !unit.IsAlive) continue;
             unit.ApplyStatus(StatusEffectType.Swift, 1);
             Debug.Log($"  Passive [{Name}]: {unit.DisplayName} gains Swift 1.");
+            BattleLog.AddAction($"Warcry: {unit.DisplayName} gains Swift 1");
             activated = true;
         }
         return activated;
@@ -102,6 +104,7 @@ public class NestingPassive : PassiveSkill
         HexCoord chosen = candidates[Random.Range(0, candidates.Count)];
         TokenManager.Instance?.PlaceToken(new WebToken(owner), chosen, grid);
         Debug.Log($"  Passive [{Name}]: {owner.DisplayName} placed a Web at {chosen}.");
+        BattleLog.AddAction($"Nesting: placed Web at {chosen}");
         return true;
     }
 }

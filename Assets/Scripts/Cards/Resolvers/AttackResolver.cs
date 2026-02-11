@@ -50,6 +50,7 @@ public class AttackResolver : ICardResolver
                 if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
                 if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
                 Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
+                BattleLog.AddAction($"Attack {unit.DisplayName} for {dmg} dmg{bonusLog}");
 
                 // Apply status-on-hit if configured
                 if (action.statusStacks > 0)
@@ -57,6 +58,7 @@ public class AttackResolver : ICardResolver
                     unit.ApplyStatus(action.statusEffect, action.statusStacks);
                     var def = StatusEffectDefs.Get(action.statusEffect);
                     Debug.Log($"Attack: applied {action.statusStacks} {def.Name} to {unit.DisplayName}.");
+                    BattleLog.AddAction($"Applied {def.Name} {action.statusStacks} to {unit.DisplayName}");
                 }
                 break;
             }

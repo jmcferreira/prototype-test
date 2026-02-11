@@ -72,6 +72,7 @@ public class EnemyUnit : Unit
         if (primaryTarget == null)
         {
             Debug.Log($"{DisplayName} has no targets — passing.");
+            BattleLog.AddAction("Passed (no targets)");
             yield return new WaitForSeconds(DelayTurnEnd);
             _turnManager.EndCurrentTurn();
             yield break;
@@ -118,12 +119,14 @@ public class EnemyUnit : Unit
         if (chosenCard == null)
         {
             Debug.Log($"{DisplayName} has no playable cards — passing.");
+            BattleLog.AddAction("Passed");
             yield return new WaitForSeconds(DelayTurnEnd);
             _turnManager.EndCurrentTurn();
             yield break;
         }
 
         Debug.Log($"{DisplayName} plays [{chosenCard.Data.cardName}].");
+        BattleLog.AddCardName(chosenCard.Data.cardName);
 
         // Step through each action with delays (like the player)
         for (int i = 0; i < chosenCard.ActionCount; i++)

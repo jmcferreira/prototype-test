@@ -44,7 +44,9 @@ public class PushAoEResolver : ICardResolver
 
         foreach (var (unit, dest) in toPush)
         {
+            int pushDist = unit.Coord.DistanceTo(dest);
             Debug.Log($"PushAoE: {unit.DisplayName} pushed from {unit.Coord} to {dest}.");
+            BattleLog.AddAction($"Push {unit.DisplayName} {pushDist} hex(es)");
             unit.ForceMoveTo(dest);
             TokenManager.Instance?.OnUnitEnterHex(unit, dest, allUnits);
         }

@@ -41,6 +41,7 @@ public class TurnManager : MonoBehaviour
         _currentIndex = 0;
         TurnNumber = 1;
         Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        BattleLog.AddTurnHeader(CurrentUnit.DisplayName, TurnNumber);
         OnTurnChanged?.Invoke(CurrentUnit);
         CurrentUnit.OnTurnStart();
     }
@@ -80,6 +81,7 @@ public class TurnManager : MonoBehaviour
         } while (!_turnOrder[_currentIndex].IsAlive && _currentIndex != startIndex);
 
         Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
+        BattleLog.AddTurnHeader(CurrentUnit.DisplayName, TurnNumber);
         OnTurnChanged?.Invoke(CurrentUnit);
         CurrentUnit.OnTurnStart();
     }

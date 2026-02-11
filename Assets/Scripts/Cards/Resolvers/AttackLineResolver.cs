@@ -60,12 +60,14 @@ public class AttackLineResolver : ICardResolver
             if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
             if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
             Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {dmg} damage{bonusLog}.");
+            BattleLog.AddAction($"Line hit {hitUnit.DisplayName} for {dmg} dmg{bonusLog}");
 
             if (action.statusStacks > 0)
             {
                 hitUnit.ApplyStatus(action.statusEffect, action.statusStacks);
                 var def = StatusEffectDefs.Get(action.statusEffect);
                 Debug.Log($"AttackLine: applied {action.statusStacks} {def.Name} to {hitUnit.DisplayName}.");
+                BattleLog.AddAction($"Applied {def.Name} {action.statusStacks} to {hitUnit.DisplayName}");
             }
         }
     }

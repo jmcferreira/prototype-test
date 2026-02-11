@@ -133,6 +133,12 @@ public class GameSetup : MonoBehaviour
         var modal = modalGo.AddComponent<GameOverModalUI>();
         modal.Init(turnManager);
 
+        // Battle log (scrollable panel below player panel)
+        var battleLogGo = new GameObject("BattleLog");
+        battleLogGo.transform.SetParent(uiGo.transform, false);
+        var battleLogUI = battleLogGo.AddComponent<BattleLogUI>();
+        battleLogUI.Init();
+
         // --- Start the game ---
         var turnOrder = new List<Unit> { player, spider1, spider2, orc };
         turnManager.Begin(turnOrder);

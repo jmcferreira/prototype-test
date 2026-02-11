@@ -51,5 +51,7 @@ public class StatusResolver : ICardResolver
         targetUnit.ApplyStatus(action.statusEffect, action.statusStacks);
         var def = StatusEffectDefs.Get(action.statusEffect);
         Debug.Log($"Status: {caster.DisplayName} applied {action.statusStacks} {def.Name} to {targetUnit.DisplayName}.");
+        string targetName = action.targetSelf ? "self" : targetUnit.DisplayName;
+        BattleLog.AddAction($"{def.Name} {action.statusStacks} on {targetName}");
     }
 }

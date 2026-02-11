@@ -221,6 +221,7 @@ public class PlayerUnit : Unit
         if (_state != State.Idle) return;
 
         Debug.Log("Player passed.");
+        BattleLog.AddAction("Passed");
         _turnManager.EndCurrentTurn();
     }
 
@@ -260,6 +261,7 @@ public class PlayerUnit : Unit
         _handUI?.ShowExpandedCard(card.Data);
         _state = State.CardSelected;
         Debug.Log($"[{card.Data.cardName}] selected.");
+        BattleLog.AddCardName(card.Data.cardName);
         ShowCurrentAction();
     }
 

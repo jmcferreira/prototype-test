@@ -46,6 +46,7 @@ public class WebToken : HexToken
 
         unit.ApplyStatus(StatusEffectType.Root, 1);
         Debug.Log($"  Web: {unit.DisplayName} stepped on a web — Root 1 applied!");
+        BattleLog.AddAction($"Web trap: {unit.DisplayName} Rooted!");
         return true; // consume the token
     }
 }

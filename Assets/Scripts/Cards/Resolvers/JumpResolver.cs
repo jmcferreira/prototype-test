@@ -33,7 +33,9 @@ public class JumpResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
+        int dist = caster.Coord.DistanceTo(target);
         Debug.Log($"Jump: {caster.DisplayName} jumped to {target}.");
+        BattleLog.AddAction($"Jump {dist}");
         caster.ForceMoveTo(target);
         caster.NotifyMoved();
         TokenManager.Instance?.OnUnitEnterHex(caster, target, allUnits);

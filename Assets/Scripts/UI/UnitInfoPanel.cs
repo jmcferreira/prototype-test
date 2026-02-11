@@ -1,22 +1,29 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// Screen-space side panel showing a unit's portrait, name, HP, and status effects.
 /// Player panel anchors to the left, enemy panels stack on the right.
 /// Border colour brightens when it is that unit's turn.
+/// Status effects show as "Icon Name X" with hover tooltips.
 /// </summary>
 public class UnitInfoPanel : MonoBehaviour
 {
     private Unit _unit;
     private TurnManager _turnManager;
+    private bool _isLeft;
 
     private Image _borderImage;
     private Text _nameText;
     private Text _hpText;
     private readonly Dictionary<StatusEffectType, Text> _statusTexts = new();
     private GameObject _deceasedOverlay;
+
+    // Tooltip
+    private GameObject _tooltipGo;
+    private Text _tooltipText;
 
     private Color _borderActiveColor;
     private Color _borderInactiveColor;
@@ -26,6 +33,7 @@ public class UnitInfoPanel : MonoBehaviour
     {
         _unit = unit;
         _turnManager = turnManager;
+        _isLeft = isLeft;
 
         Color teamColor = unit.Team == Team.Player
             ? new Color(0.3f, 0.55f, 1f)
@@ -50,7 +58,7 @@ public class UnitInfoPanel : MonoBehaviour
     {
         var rect = gameObject.AddComponent<RectTransform>();
 
-        bool hasPassive = unit.Passive != null;
+        bool hasPassive = _unit.Passive != null;
         if (isLeft)
         {
             rect.anchorMin = new Vector2(0f, 0.5f);
@@ -105,15 +113,18 @@ public class UnitInfoPanel : MonoBehaviour
         // HP
         _hpText = CreateText(innerGo.transform, "HP", isLeft ? 24 : 18, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), isLeft ? 30 : 24);
 
-        // Status icons row
-        BuildStatusRow(innerGo.transform);
+        // Status list (vertical, one row per active status)
+        BuildStatusList(innerGo.transform, isLeft);
 
         // Passive skill description
-        if (unit.Passive != null)
-            BuildPassiveSection(innerGo.transform, unit.Passive, isLeft);
+        if (_unit.Passive != null)
+            BuildPassiveSection(innerGo.transform, _unit.Passive, isLeft);
 
         // Deceased overlay (hidden until unit dies)
         BuildDeceasedOverlay();
+
+        // Tooltip (hidden by default)
+        BuildTooltip();
     }
 
     private void BuildAvatar(Transform parent, Color teamColor, int size)
@@ -148,37 +159,130 @@ public class UnitInfoPanel : MonoBehaviour
         r.offsetMax = Vector2.zero;
     }
 
-    private void BuildStatusRow(Transform parent)
+    private void BuildStatusList(Transform parent, bool isLeft)
     {
-        var go = new GameObject("StatusRow");
-        go.transform.SetParent(parent, false);
-        var hl = go.AddComponent<HorizontalLayoutGroup>();
-        hl.spacing = 4;
-        hl.childAlignment = TextAnchor.MiddleCenter;
-        hl.childForceExpandWidth = false;
-        hl.childForceExpandHeight = false;
-        var le = go.AddComponent<LayoutElement>();
-        le.preferredHeight = 24;
+        var containerGo = new GameObject("StatusList");
+        containerGo.transform.SetParent(parent, false);
+        var vl = containerGo.AddComponent<VerticalLayoutGroup>();
+        vl.spacing = 1;
+        vl.childAlignment = TextAnchor.UpperLeft;
+        vl.childForceExpandWidth = true;
+        vl.childForceExpandHeight = false;
+        var containerLe = containerGo.AddComponent<LayoutElement>();
+        containerLe.flexibleHeight = 1;
+
+        int fontSize = isLeft ? 13 : 11;
+        float rowHeight = isLeft ? 18f : 15f;
 
         foreach (var kvp in StatusEffectDefs.All)
         {
             var type = kvp.Key;
             var def = kvp.Value;
 
-            var stGo = new GameObject($"Status_{def.Name}");
-            stGo.transform.SetParent(go.transform, false);
-            var stText = stGo.AddComponent<Text>();
+            var rowGo = new GameObject($"Status_{def.Name}");
+            rowGo.transform.SetParent(containerGo.transform, false);
+
+            // Background image for raycast detection (transparent)
+            var rowImg = rowGo.AddComponent<Image>();
+            rowImg.color = Color.clear;
+            rowImg.raycastTarget = true;
+
+            var rowLe = rowGo.AddComponent<LayoutElement>();
+            rowLe.preferredHeight = rowHeight;
+
+            // Text: "Icon Name X"
+            var stText = rowGo.AddComponent<Text>();
             stText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            stText.fontSize = 18;
-            stText.alignment = TextAnchor.MiddleCenter;
+            stText.fontSize = fontSize;
+            stText.alignment = TextAnchor.MiddleLeft;
             stText.color = def.IconColor;
             stText.raycastTarget = false;
-            var stLe = stGo.AddComponent<LayoutElement>();
-            stLe.preferredWidth = 42;
-            stLe.preferredHeight = 24;
-            stGo.SetActive(false);
+
+            // Hover events for tooltip
+            var trigger = rowGo.AddComponent<EventTrigger>();
+            string desc = def.Description ?? def.Name;
+            AddPointerEvent(trigger, EventTriggerType.PointerEnter, desc);
+            AddPointerEvent(trigger, EventTriggerType.PointerExit, null);
+
+            rowGo.SetActive(false);
             _statusTexts[type] = stText;
         }
+    }
+
+    private void AddPointerEvent(EventTrigger trigger, EventTriggerType eventType, string tooltipDesc)
+    {
+        var entry = new EventTrigger.Entry { eventID = eventType };
+        if (eventType == EventTriggerType.PointerEnter)
+        {
+            entry.callback.AddListener((_) => ShowTooltip(tooltipDesc));
+        }
+        else
+        {
+            entry.callback.AddListener((_) => HideTooltip());
+        }
+        trigger.triggers.Add(entry);
+    }
+
+    private void BuildTooltip()
+    {
+        _tooltipGo = new GameObject("Tooltip");
+        _tooltipGo.transform.SetParent(transform, false);
+
+        var tooltipRect = _tooltipGo.AddComponent<RectTransform>();
+        // Position to the right of the panel for left panels, left for right panels
+        if (_isLeft)
+        {
+            tooltipRect.anchorMin = new Vector2(1f, 0.5f);
+            tooltipRect.anchorMax = new Vector2(1f, 0.5f);
+            tooltipRect.pivot = new Vector2(0f, 0.5f);
+            tooltipRect.anchoredPosition = new Vector2(6f, 0f);
+        }
+        else
+        {
+            tooltipRect.anchorMin = new Vector2(0f, 0.5f);
+            tooltipRect.anchorMax = new Vector2(0f, 0.5f);
+            tooltipRect.pivot = new Vector2(1f, 0.5f);
+            tooltipRect.anchoredPosition = new Vector2(-6f, 0f);
+        }
+        tooltipRect.sizeDelta = new Vector2(200f, 50f);
+
+        // Dark background
+        var bgImg = _tooltipGo.AddComponent<Image>();
+        bgImg.color = new Color(0.08f, 0.08f, 0.12f, 0.95f);
+        bgImg.raycastTarget = false;
+
+        // Text
+        var textGo = new GameObject("TooltipText");
+        textGo.transform.SetParent(_tooltipGo.transform, false);
+        _tooltipText = textGo.AddComponent<Text>();
+        _tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _tooltipText.fontSize = 11;
+        _tooltipText.fontStyle = FontStyle.Italic;
+        _tooltipText.alignment = TextAnchor.MiddleCenter;
+        _tooltipText.color = new Color(0.85f, 0.85f, 0.85f);
+        _tooltipText.raycastTarget = false;
+        _tooltipText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        _tooltipText.verticalOverflow = VerticalWrapMode.Overflow;
+        var txtRect = textGo.GetComponent<RectTransform>();
+        txtRect.anchorMin = Vector2.zero;
+        txtRect.anchorMax = Vector2.one;
+        txtRect.offsetMin = new Vector2(6f, 4f);
+        txtRect.offsetMax = new Vector2(-6f, -4f);
+
+        _tooltipGo.SetActive(false);
+    }
+
+    private void ShowTooltip(string description)
+    {
+        if (_tooltipGo == null || string.IsNullOrEmpty(description)) return;
+        _tooltipText.text = description;
+        _tooltipGo.SetActive(true);
+    }
+
+    private void HideTooltip()
+    {
+        if (_tooltipGo != null)
+            _tooltipGo.SetActive(false);
     }
 
     private void BuildPassiveSection(Transform parent, PassiveSkill passive, bool isLeft)
@@ -298,9 +402,10 @@ public class UnitInfoPanel : MonoBehaviour
             if (_deceasedOverlay != null)
                 _deceasedOverlay.SetActive(true);
 
-            // Hide all status icons
+            // Hide all status entries
             foreach (var kvp in _statusTexts)
                 kvp.Value.gameObject.SetActive(false);
+            HideTooltip();
             return;
         }
 
@@ -313,7 +418,7 @@ public class UnitInfoPanel : MonoBehaviour
             var def = StatusEffectDefs.Get(kvp.Key);
             kvp.Value.gameObject.SetActive(stacks > 0);
             if (stacks > 0)
-                kvp.Value.text = $"{def.Icon}{stacks}";
+                kvp.Value.text = $"{def.Icon} {def.Name} {stacks}";
         }
     }
 

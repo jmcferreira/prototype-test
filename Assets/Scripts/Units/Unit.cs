@@ -288,6 +288,7 @@ public abstract class Unit : MonoBehaviour
             {
                 TakeHit(dmg);
                 Debug.Log($"{DisplayName} took {dmg} {def.Name} damage ({stacks} stacks)");
+                BattleLog.AddAction($"{def.Name} dealt {dmg} dmg to {DisplayName}");
             }
 
             if (def.CooldownPenalty > 0)

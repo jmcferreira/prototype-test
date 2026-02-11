@@ -43,6 +43,7 @@ public class AttackAoEResolver : ICardResolver
                 if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
                 if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
                 Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
+                BattleLog.AddAction($"AoE hit {unit.DisplayName} for {dmg} dmg{bonusLog}");
             }
         }
         Debug.Log($"AoE: {caster.DisplayName} hit {hitCount} target(s) total.");

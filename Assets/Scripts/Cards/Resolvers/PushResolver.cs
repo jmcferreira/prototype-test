@@ -35,7 +35,9 @@ public class PushResolver : ICardResolver
         int pushDir = GetDirectionAwayFrom(caster.Coord, enemy.Coord);
         HexCoord dest = WalkDirection(enemy.Coord, pushDir, action.pushDistance, enemy, allUnits, grid);
 
-        Debug.Log($"Push: {enemy.DisplayName} pushed {enemy.Coord.DistanceTo(dest)} hex(es) from {enemy.Coord} to {dest}.");
+        int pushDist = enemy.Coord.DistanceTo(dest);
+        Debug.Log($"Push: {enemy.DisplayName} pushed {pushDist} hex(es) from {enemy.Coord} to {dest}.");
+        BattleLog.AddAction($"Push {enemy.DisplayName} {pushDist} hex(es)");
         enemy.ForceMoveTo(dest);
         TokenManager.Instance?.OnUnitEnterHex(enemy, dest, allUnits);
     }

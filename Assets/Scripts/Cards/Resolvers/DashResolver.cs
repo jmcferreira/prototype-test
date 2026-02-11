@@ -37,7 +37,9 @@ public class DashResolver : ICardResolver
 
     public void Resolve(CardAction action, Unit caster, List<Unit> allUnits, HexGrid grid, HexCoord target)
     {
+        int dist = caster.Coord.DistanceTo(target);
         Debug.Log($"Dash: {caster.DisplayName} dashed to {target}.");
+        BattleLog.AddAction($"Dash {dist}");
         caster.ForceMoveTo(target);
         caster.NotifyMoved();
         TokenManager.Instance?.OnUnitEnterHex(caster, target, allUnits);
