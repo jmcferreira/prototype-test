@@ -15,4 +15,5 @@ public enum CardEffect
     AttackLine,
     PushAoE,
     ReduceCooldown,
+    PlaceWeb,
 }

@@ -88,6 +88,7 @@ public class Hand
             case CardEffect.Jump:      return $"Jump {action.range}";
             case CardEffect.AttackAoE: return $"AoE {action.damage} Rng {action.range}";
             case CardEffect.ReduceCooldown: return $"Haste -1 CD";
+            case CardEffect.PlaceWeb:  return $"Web Rng {action.range}";
             case CardEffect.Status:
                 var def = StatusEffectDefs.Get(action.statusEffect);
                 string self = action.targetSelf ? " (self)" : "";

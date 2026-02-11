@@ -67,8 +67,8 @@ public class GameSetup : MonoBehaviour
 
         // --- Passive skills ---
         player.SetPassive(new SetupPassive());
-        spider1.SetPassive(new NestingPassive());
-        spider2.SetPassive(new NestingPassive());
+        spider1.SetPassive(new HordePassive());
+        spider2.SetPassive(new HordePassive());
         cultist.SetPassive(new DarkPactPassive());
 
         // --- Token manager ---
@@ -303,12 +303,13 @@ public class GameSetup : MonoBehaviour
 
     private static CardData[] CreateSpiderCards()
     {
-        // Card 1 — Web Leap: Jump 2
+        // Card 1 — Web Leap: Jump 2 → Place Web 1
         var webLeap = ScriptableObject.CreateInstance<CardData>();
         webLeap.cardName = "Web Leap";
         webLeap.actions = new[]
         {
             new CardAction { effect = CardEffect.Jump, range = 2 },
+            new CardAction { effect = CardEffect.PlaceWeb, range = 1 },
         };
         webLeap.cooldown = 1;
 

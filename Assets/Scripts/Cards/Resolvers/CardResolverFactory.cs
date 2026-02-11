@@ -19,6 +19,7 @@ public static class CardResolverFactory
         { CardEffect.AttackLine,     new AttackLineResolver() },
         { CardEffect.PushAoE,        new PushAoEResolver() },
         { CardEffect.ReduceCooldown, new ReduceCooldownResolver() },
+        { CardEffect.PlaceWeb,       new PlaceWebResolver() },
     };
 
     public static ICardResolver Get(CardEffect effect)

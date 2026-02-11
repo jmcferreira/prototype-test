@@ -63,45 +63,33 @@ public class DarkPactPassive : PassiveSkill
 }
 
 /// <summary>
-/// Spider "Nesting": End of turn, if the unit didn't Attack → place a web token
-/// on a random adjacent unoccupied hex.
+/// Spider "Horde": End of turn, if adjacent to an ally → gain Strength +1.
+/// Rewards spiders for sticking together.
 /// </summary>
-public class NestingPassive : PassiveSkill
+public class HordePassive : PassiveSkill
 {
-    public NestingPassive()
-        : base("Nesting", "If you didn't Attack this turn, place a Web on an adjacent hex.") { }
+    public HordePassive()
+        : base("Horde", "If adjacent to an ally, gain Strength +1.") { }
 
     public override bool TryActivate(Unit owner, List<Unit> allUnits, HexGrid grid)
     {
-        if (owner.DidAttackThisTurn) return false;
-
-        // Find adjacent hexes that are on-grid, unoccupied, and don't already have a web
-        var candidates = new List<HexCoord>();
-        for (int dir = 0; dir < 6; dir++)
+        // Check if any alive ally (same team, not self) is adjacent
+        bool hasAdjacentAlly = false;
+        foreach (var unit in allUnits)
         {
-            HexCoord adj = owner.Coord.Neighbor(dir);
-            if (!grid.TryGetTile(adj, out _)) continue;
-
-            // Skip occupied hexes
-            bool occupied = false;
-            foreach (var u in allUnits)
+            if (unit == owner || unit.Team != owner.Team || !unit.IsAlive) continue;
+            if (owner.Coord.DistanceTo(unit.Coord) == 1)
             {
-                if (u.IsAlive && u.Coord == adj) { occupied = true; break; }
+                hasAdjacentAlly = true;
+                break;
             }
-            if (occupied) continue;
-
-            // Skip hexes that already have a token
-            if (TokenManager.Instance != null && TokenManager.Instance.HasToken(adj)) continue;
-
-            candidates.Add(adj);
         }
 
-        if (candidates.Count == 0) return false;
+        if (!hasAdjacentAlly) return false;
 
-        HexCoord chosen = candidates[Random.Range(0, candidates.Count)];
-        TokenManager.Instance?.PlaceToken(new WebToken(owner), chosen, grid);
-        Debug.Log($"  Passive [{Name}]: {owner.DisplayName} placed a Web at {chosen}.");
-        BattleLog.AddAction($"Nesting: placed Web at {chosen}");
+        owner.ApplyStatus(StatusEffectType.Strength, 1);
+        Debug.Log($"  Passive [{Name}]: {owner.DisplayName} gains Strength +1.");
+        BattleLog.AddAction($"Horde: Strength +1");
         return true;
     }
 }
