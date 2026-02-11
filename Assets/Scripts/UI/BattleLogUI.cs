@@ -45,7 +45,7 @@ public class BattleLogUI : MonoBehaviour
         rootRect.anchorMin = new Vector2(0f, 0.5f);
         rootRect.anchorMax = new Vector2(0f, 0.5f);
         rootRect.pivot = new Vector2(0f, 1f);
-        rootRect.anchoredPosition = new Vector2(12f, -81f);
+        rootRect.anchoredPosition = new Vector2(12f, -106f);
         rootRect.sizeDelta = new Vector2(PanelWidth, PanelHeight);
 
         // Dark background
