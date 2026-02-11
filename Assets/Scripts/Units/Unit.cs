@@ -29,6 +29,7 @@ public abstract class Unit : MonoBehaviour
     // --- Turn action tracking ---
     public bool DidMoveThisTurn { get; private set; }
     public bool DidAttackThisTurn { get; private set; }
+    public bool WasHitThisTurn { get; private set; }
 
     private HexGrid _grid;
     private float _hexSize;
@@ -141,6 +142,8 @@ public abstract class Unit : MonoBehaviour
     public void TakeHit(int damage)
     {
         HP = Mathf.Max(0, HP - damage);
+        if (damage > 0)
+            WasHitThisTurn = true;
         Debug.Log($"{DisplayName} took {damage} damage — HP: {HP}");
         if (damage > 0)
             SpawnDamageNumber(damage);
@@ -378,6 +381,7 @@ public abstract class Unit : MonoBehaviour
     {
         DidMoveThisTurn = false;
         DidAttackThisTurn = false;
+        WasHitThisTurn = false;
     }
 
     /// <summary>Called by TurnManager when this unit's turn ends.</summary>

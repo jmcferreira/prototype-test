@@ -43,25 +43,22 @@ public class SetupPassive : PassiveSkill
 }
 
 /// <summary>
-/// Orc "Warcry": End of turn → apply Swift 1 to all allies except self.
+/// Cultist "Dark Pact": End of turn, if the unit was hit this turn → gain Strength 1.
+/// Punishes the player for focusing the Cultist.
 /// </summary>
-public class WarcryPassive : PassiveSkill
+public class DarkPactPassive : PassiveSkill
 {
-    public WarcryPassive()
-        : base("Warcry", "End of turn: all allies (except self) gain Swift 1.") { }
+    public DarkPactPassive()
+        : base("Dark Pact", "If hit this turn, gain Strength +1.") { }
 
     public override bool TryActivate(Unit owner, List<Unit> allUnits, HexGrid grid)
     {
-        bool activated = false;
-        foreach (var unit in allUnits)
-        {
-            if (unit == owner || unit.Team != owner.Team || !unit.IsAlive) continue;
-            unit.ApplyStatus(StatusEffectType.Swift, 1);
-            Debug.Log($"  Passive [{Name}]: {unit.DisplayName} gains Swift 1.");
-            BattleLog.AddAction($"Warcry: {unit.DisplayName} gains Swift 1");
-            activated = true;
-        }
-        return activated;
+        if (!owner.WasHitThisTurn) return false;
+
+        owner.ApplyStatus(StatusEffectType.Strength, 1);
+        Debug.Log($"  Passive [{Name}]: {owner.DisplayName} gains Strength +1.");
+        BattleLog.AddAction($"Dark Pact: Strength +1");
+        return true;
     }
 }
 

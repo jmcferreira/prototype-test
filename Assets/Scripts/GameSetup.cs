@@ -45,7 +45,7 @@ public class GameSetup : MonoBehaviour
 
         // --- Enemies ---
         var spiderCards = CreateSpiderCards();
-        var orcCards = CreateOrcCards();
+        var cultistCards = CreateCultistCards();
 
         // Spider 1 (2 XP, 1 Gold loot)
         var spider1Go = new GameObject();
@@ -59,24 +59,24 @@ public class GameSetup : MonoBehaviour
         spider2.Init(Team.Enemy, new HexCoord(5, -1), hexGrid, "Spider 2", 3, "S", xpReward: 2, goldReward: 1);
         spider2.InitCards(CreateSpiderCards()); // separate instances
 
-        // Orc (4 XP, 2 Gold loot)
-        var orcGo = new GameObject();
-        var orc = orcGo.AddComponent<EnemyUnit>();
-        orc.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Orc", 6, "O", xpReward: 4, goldReward: 2);
-        orc.InitCards(orcCards);
+        // Cultist (4 XP, 2 Gold loot)
+        var cultistGo = new GameObject();
+        var cultist = cultistGo.AddComponent<EnemyUnit>();
+        cultist.Init(Team.Enemy, new HexCoord(3, 3), hexGrid, "Cultist", 8, "C", xpReward: 4, goldReward: 2);
+        cultist.InitCards(cultistCards);
 
         // --- Passive skills ---
         player.SetPassive(new SetupPassive());
         spider1.SetPassive(new NestingPassive());
         spider2.SetPassive(new NestingPassive());
-        orc.SetPassive(new WarcryPassive());
+        cultist.SetPassive(new DarkPactPassive());
 
         // --- Token manager ---
         var tokenManagerGo = new GameObject("TokenManager");
         tokenManagerGo.AddComponent<TokenManager>();
 
         // --- Enemy defeat: XP reward + loot drop ---
-        var allEnemies = new EnemyUnit[] { spider1, spider2, orc };
+        var allEnemies = new EnemyUnit[] { spider1, spider2, cultist };
         foreach (var enemy in allEnemies)
         {
             var e = enemy; // capture for closure
@@ -134,7 +134,7 @@ public class GameSetup : MonoBehaviour
         player.SetTurnManager(turnManager);
         spider1.SetTurnManager(turnManager);
         spider2.SetTurnManager(turnManager);
-        orc.SetTurnManager(turnManager);
+        cultist.SetTurnManager(turnManager);
 
         // --- Side panels ---
         // Player on the left
@@ -144,7 +144,7 @@ public class GameSetup : MonoBehaviour
         playerPanel.Init(player, turnManager, true);
 
         // Enemies stacked on the right
-        var enemies = new EnemyUnit[] { spider1, spider2, orc };
+        var enemies = new EnemyUnit[] { spider1, spider2, cultist };
         for (int i = 0; i < enemies.Length; i++)
         {
             var panelGo = new GameObject($"EnemyPanel_{enemies[i].DisplayName}");
@@ -178,14 +178,14 @@ public class GameSetup : MonoBehaviour
         currencyUI.Init();
 
         // --- Start the game ---
-        var turnOrder = new List<Unit> { player, spider1, spider2, orc };
+        var turnOrder = new List<Unit> { player, spider1, spider2, cultist };
         turnManager.Begin(turnOrder);
 
         // Camera controls (zoom + pan)
         if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
             Camera.main.gameObject.AddComponent<CameraController>();
 
-        Debug.Log($"Player at {playerCoord}, Spider 1 at (4,0), Spider 2 at (5,-1), Orc at (3,3)");
+        Debug.Log($"Player at {playerCoord}, Spider 1 at (4,0), Spider 2 at (5,-1), Cultist at (3,3)");
     }
 
     // ── Initial loot placement ─────────────────────────────────────────
@@ -325,27 +325,28 @@ public class GameSetup : MonoBehaviour
         return new[] { webLeap, venomBite };
     }
 
-    private static CardData[] CreateOrcCards()
+    private static CardData[] CreateCultistCards()
     {
-        // Card 1 — War March: Move 2 → Swift 1 (self)
-        var warMarch = ScriptableObject.CreateInstance<CardData>();
-        warMarch.cardName = "War March";
-        warMarch.actions = new[]
+        // Card 1 — Dark Bolt: Move 1 → Attack 2 Range 3 (consistent ranged pressure)
+        var darkBolt = ScriptableObject.CreateInstance<CardData>();
+        darkBolt.cardName = "Dark Bolt";
+        darkBolt.actions = new[]
         {
-            new CardAction { effect = CardEffect.Move, range = 2 },
-            new CardAction { effect = CardEffect.Status, range = 0, statusEffect = StatusEffectType.Swift, statusStacks = 1, targetSelf = true },
+            new CardAction { effect = CardEffect.Move, range = 1 },
+            new CardAction { effect = CardEffect.Attack, range = 3, damage = 2 },
         };
-        warMarch.cooldown = 1;
+        darkBolt.cooldown = 0;
 
-        // Card 2 — Cleave: AttackAoE 3 Range 1 (all adjacent targets)
+        // Card 2 — Cleave: AttackAoE 3 Range 1 → Strength 1 (self)
         var cleave = ScriptableObject.CreateInstance<CardData>();
         cleave.cardName = "Cleave";
         cleave.actions = new[]
         {
             new CardAction { effect = CardEffect.AttackAoE, range = 1, damage = 3 },
+            new CardAction { effect = CardEffect.Status, range = 0, statusEffect = StatusEffectType.Strength, statusStacks = 1, targetSelf = true },
         };
-        cleave.cooldown = 2;
+        cleave.cooldown = 1;
 
-        return new[] { warMarch, cleave };
+        return new[] { darkBolt, cleave };
     }
 }
