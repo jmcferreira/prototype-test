@@ -123,8 +123,8 @@ public class UnitInfoPanel : MonoBehaviour
             rect.anchorMin = new Vector2(1f, 0.5f);
             rect.anchorMax = new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
-            // Stack multiple enemy panels vertically
-            float y = -100f + stackIndex * 220f;
+            // Stack multiple enemy panels vertically (with gap between panels)
+            float y = -100f + stackIndex * 245f;
             rect.anchoredPosition = new Vector2(-12f, y);
             rect.sizeDelta = new Vector2(170f, hasPassive ? 230f : 190f);
         }
@@ -362,12 +362,12 @@ public class UnitInfoPanel : MonoBehaviour
         bgImg.raycastTarget = false;
 
         var intentRect = _intentGo.GetComponent<RectTransform>();
-        // Position to the left of the enemy panel
-        intentRect.anchorMin = new Vector2(0f, 0.5f);
-        intentRect.anchorMax = new Vector2(0f, 0.5f);
+        // Stretch to match full panel height, positioned to its left
+        intentRect.anchorMin = new Vector2(0f, 0f);
+        intentRect.anchorMax = new Vector2(0f, 1f);
         intentRect.pivot = new Vector2(1f, 0.5f);
         intentRect.anchoredPosition = new Vector2(-6f, 0f);
-        intentRect.sizeDelta = new Vector2(180f, 70f);
+        intentRect.sizeDelta = new Vector2(170f, 0f);
 
         // Vertical layout inside
         var layoutGo = new GameObject("IntentLayout");
@@ -378,8 +378,8 @@ public class UnitInfoPanel : MonoBehaviour
         layoutRect.offsetMin = new Vector2(8f, 4f);
         layoutRect.offsetMax = new Vector2(-8f, -4f);
         var vl = layoutGo.AddComponent<VerticalLayoutGroup>();
-        vl.spacing = 2;
-        vl.childAlignment = TextAnchor.MiddleLeft;
+        vl.spacing = 4;
+        vl.childAlignment = TextAnchor.UpperLeft;
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
 
