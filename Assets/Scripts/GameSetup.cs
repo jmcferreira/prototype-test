@@ -383,10 +383,192 @@ public class GameSetup : MonoBehaviour
         }
     }
 
-    // ── PVP setup (filled in Phase 6) ─────────────────────────────────────
+    // ── PVP setup ──────────────────────────────────────────────────────────
 
     private void SetupPVP()
     {
-        Debug.Log("PVP mode — setup not yet implemented.");
+        // Show faction selection, then bootstrap the match
+        var selCanvas = new GameObject("FactionSelCanvas");
+        var canvas = selCanvas.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        selCanvas.AddComponent<CanvasScaler>();
+        selCanvas.AddComponent<GraphicRaycaster>();
+
+        var selGo = new GameObject("FactionSelection");
+        selGo.transform.SetParent(selCanvas.transform, false);
+        var selUI = selGo.AddComponent<FactionSelectionUI>();
+        selUI.Init();
+
+        selUI.OnBothSelected += (p1Faction, p2Faction) =>
+        {
+            Destroy(selCanvas);
+            BootstrapPvpMatch(p1Faction, p2Faction);
+        };
+    }
+
+    private void BootstrapPvpMatch(string p1FactionId, string p2FactionId)
+    {
+        var arena = PvpArenaLayouts.CreateDefaultArena();
+        PvpMatchState.NewMatch(arena);
+        var match = PvpMatchState.Current;
+        match.FactionIds[0] = p1FactionId;
+        match.FactionIds[1] = p2FactionId;
+
+        var f1 = FactionLibrary.Get(p1FactionId);
+        var f2 = FactionLibrary.Get(p2FactionId);
+
+        // Reconfigure grid for PVP arena
+        hexGrid.Regenerate(arena.gridColumns, arena.gridRows);
+
+        // --- Spawn towers ---
+        var p1Base = SpawnTower(TowerType.Base, 0, Team.Player, arena.p1BaseTowerPos, arena.baseTowerHP);
+        var p2Base = SpawnTower(TowerType.Base, 1, Team.Enemy, arena.p2BaseTowerPos, arena.baseTowerHP);
+
+        var allTowers = new List<TowerUnit> { p1Base, p2Base };
+        foreach (var pos in arena.p1GuardTowerPositions)
+            allTowers.Add(SpawnTower(TowerType.Guard, 0, Team.Player, pos,
+                arena.guardTowerHP, arena.guardTowerDamage, arena.guardTowerRange));
+        foreach (var pos in arena.p2GuardTowerPositions)
+            allTowers.Add(SpawnTower(TowerType.Guard, 1, Team.Enemy, pos,
+                arena.guardTowerHP, arena.guardTowerDamage, arena.guardTowerRange));
+
+        // --- Spawn champions ---
+        var p1Champion = SpawnPvpChampion(f1.championDef, arena.p1ChampionSpawn, 0);
+        var p2Champion = SpawnPvpChampion(f2.championDef, arena.p2ChampionSpawn, 1);
+
+        // --- Fate decks ---
+        p1Champion.SetFateDeck(new FateDeck(FateCardLibrary.GetStarterDeck()));
+        p2Champion.SetFateDeck(new FateDeck(FateCardLibrary.GetStarterDeck()));
+
+        // --- Token manager ---
+        var tokenManagerGo = new GameObject("TokenManager");
+        tokenManagerGo.AddComponent<TokenManager>();
+
+        // --- HexInteraction (shared by both champions) ---
+        var interactionGo = new GameObject("HexInteraction");
+        var hexInteraction = interactionGo.AddComponent<HexInteraction>();
+        p1Champion.SetHexInteraction(hexInteraction);
+        p2Champion.SetHexInteraction(hexInteraction);
+
+        // --- Shared UI canvas ---
+        var uiGo = new GameObject("GameUI");
+        var uiCanvas = uiGo.AddComponent<Canvas>();
+        uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        uiCanvas.sortingOrder = 10;
+        uiGo.AddComponent<CanvasScaler>();
+        uiGo.AddComponent<GraphicRaycaster>();
+
+        // Hand UI (card bar at bottom — switches between active champion's hand)
+        var handUIGo = new GameObject("HandUI");
+        handUIGo.transform.SetParent(uiGo.transform, false);
+        var handRect = handUIGo.AddComponent<RectTransform>();
+        handRect.anchorMin = Vector2.zero;
+        handRect.anchorMax = Vector2.one;
+        handRect.offsetMin = Vector2.zero;
+        handRect.offsetMax = Vector2.zero;
+        var handUI = handUIGo.AddComponent<HandUI>();
+        handUI.Init(p1Champion.Hand);
+        p1Champion.SetHandUI(handUI);
+        p2Champion.SetHandUI(handUI);
+
+        // --- PVP Turn Manager ---
+        var turnManagerGo = new GameObject("PvpTurnManager");
+        var pvpTurnManager = turnManagerGo.AddComponent<PvpTurnManager>();
+        pvpTurnManager.InitPvp(p1Champion, p2Champion, p1Base, p2Base, allTowers, arena.cyclesPerRound);
+        p1Champion.SetTurnManager(pvpTurnManager);
+        p2Champion.SetTurnManager(pvpTurnManager);
+
+        // --- Side panels ---
+        // P1 champion on the left
+        var p1Panel = new GameObject("P1Panel");
+        p1Panel.transform.SetParent(uiGo.transform, false);
+        p1Panel.AddComponent<UnitInfoPanel>().Init(p1Champion, pvpTurnManager, true, 0);
+
+        // P2 champion on the right
+        var p2Panel = new GameObject("P2Panel");
+        p2Panel.transform.SetParent(uiGo.transform, false);
+        p2Panel.AddComponent<UnitInfoPanel>().Init(p2Champion, pvpTurnManager, false, 0);
+
+        // Tower panels (stacked below champions)
+        int leftStack = 1;
+        int rightStack = 1;
+        foreach (var tower in allTowers)
+        {
+            var tPanel = new GameObject($"TowerPanel_{tower.DisplayName}");
+            tPanel.transform.SetParent(uiGo.transform, false);
+            bool isLeft = tower.OwnerAlliance == 0;
+            int idx = isLeft ? leftStack++ : rightStack++;
+            tPanel.AddComponent<UnitInfoPanel>().Init(tower, pvpTurnManager, isLeft, idx);
+        }
+
+        // Turn banner (top of screen)
+        var bannerGo = new GameObject("TurnBanner");
+        bannerGo.transform.SetParent(uiGo.transform, false);
+        bannerGo.AddComponent<TurnBannerUI>().Init(pvpTurnManager);
+
+        // Battle log
+        var battleLogGo = new GameObject("BattleLog");
+        battleLogGo.transform.SetParent(uiGo.transform, false);
+        battleLogGo.AddComponent<BattleLogUI>().Init();
+
+        // PVP gold display
+        var goldGo = new GameObject("PvpGoldUI");
+        goldGo.transform.SetParent(uiGo.transform, false);
+        goldGo.AddComponent<PvpGoldUI>().Init();
+
+        // Fate card selection UI
+        var fateUIGo = new GameObject("FateSelectionUI");
+        fateUIGo.transform.SetParent(uiGo.transform, false);
+        var fateSelectionUI = fateUIGo.AddComponent<FateSelectionUI>();
+        fateSelectionUI.Init(uiGo.transform);
+
+        // Fate manager
+        var fateManagerGo = new GameObject("FateManager");
+        var fateManager = fateManagerGo.AddComponent<FateManager>();
+        fateManager.SetSelectionUI(fateSelectionUI);
+
+        // PVP game over modal
+        var pvpModalGo = new GameObject("PvpGameOverModal");
+        pvpModalGo.transform.SetParent(uiGo.transform, false);
+        var pvpModal = pvpModalGo.AddComponent<PvpGameOverUI>();
+        pvpModal.Init(pvpTurnManager);
+
+        // --- Store UI reference for recruitment (Phase 7) ---
+        // Recruitment UI placeholder (created here, hidden until round end)
+        var recruitGo = new GameObject("RecruitmentUI");
+        recruitGo.transform.SetParent(uiGo.transform, false);
+        var recruitUI = recruitGo.AddComponent<RecruitmentUI>();
+        recruitUI.Init(pvpTurnManager, hexGrid, allTowers);
+
+        // --- Start the match ---
+        var turnOrder = new List<Unit> { p1Champion, p2Champion };
+        pvpTurnManager.Begin(turnOrder);
+
+        // Camera controls
+        if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
+            Camera.main.gameObject.AddComponent<CameraController>();
+
+        Debug.Log($"PVP Match started: {f1.factionName} vs {f2.factionName}");
+    }
+
+    private TowerUnit SpawnTower(TowerType type, int alliance, Team team, HexCoord pos,
+                                  int hp, int damage = 0, int range = 0)
+    {
+        var go = new GameObject();
+        var tower = go.AddComponent<TowerUnit>();
+        tower.InitTower(type, alliance, team, pos, hexGrid, hp, damage, range);
+        return tower;
+    }
+
+    private PlayerUnit SpawnPvpChampion(UnitDef def, HexCoord pos, int alliance)
+    {
+        var go = new GameObject();
+        var champion = go.AddComponent<PlayerUnit>();
+        champion.Init(Team.Player, pos, hexGrid, def.displayName, def.maxHP, def.iconLetter);
+        champion.InitHand(CardLibrary.GetDeck(def.deckId));
+        champion.SetPassive(PassiveFactory.Create(def.passiveType));
+        champion.SetAlliance(alliance);
+        return champion;
     }
 }
