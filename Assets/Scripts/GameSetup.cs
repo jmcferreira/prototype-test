@@ -48,6 +48,7 @@ public class GameSetup : MonoBehaviour
 
         var run = RunState.Current;
         var scenario = run.GetNextScenario() ?? ScenarioPool.GetScenario(1);
+        run.ChosenNextScenario = null; // clear after loading
 
         // Reconfigure grid if scenario requires different dimensions
         if (scenario.gridColumns != hexGrid.Columns || scenario.gridRows != hexGrid.Rows)
@@ -140,11 +141,17 @@ public class GameSetup : MonoBehaviour
         var rewardScreen = rewardGo.AddComponent<RewardScreenUI>();
         rewardScreen.Init();
 
+        // Scenario selection screen (hidden until between-scenario transition)
+        var scenarioSelGo = new GameObject("ScenarioSelection");
+        scenarioSelGo.transform.SetParent(uiGo.transform, false);
+        var scenarioSelection = scenarioSelGo.AddComponent<ScenarioSelectionUI>();
+        scenarioSelection.Init();
+
         // Game-over modal (hidden until victory/defeat)
         var modalGo = new GameObject("GameOverModal");
         modalGo.transform.SetParent(uiGo.transform, false);
         var modal = modalGo.AddComponent<GameOverModalUI>();
-        modal.Init(turnManager, player, rewardScreen);
+        modal.Init(turnManager, player, rewardScreen, scenarioSelection);
 
         // Battle log (scrollable panel below player panel)
         var battleLogGo = new GameObject("BattleLog");

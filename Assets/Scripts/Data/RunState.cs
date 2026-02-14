@@ -18,6 +18,9 @@ public class RunState
     public int TotalGold;
     public int TotalXP;
 
+    // Chosen scenario for the next stage (set by ScenarioSelectionUI, cleared after loading)
+    public ScenarioDef ChosenNextScenario;
+
     // Healing between scenarios (base 10%, modified by HealBonus relics)
     public float HealPercent = 0.10f;
 
@@ -89,10 +92,14 @@ public class RunState
     }
 
     /// <summary>
-    /// Get the next scenario for this run. Returns null if the run is complete.
+    /// Get the next scenario for this run. Uses the chosen scenario if set,
+    /// otherwise falls back to the default (first) choice for the stage.
+    /// Returns null if the run is complete.
     /// </summary>
     public ScenarioDef GetNextScenario()
     {
+        if (ChosenNextScenario != null)
+            return ChosenNextScenario;
         return ScenarioPool.GetScenario(ScenariosCompleted + 1);
     }
 }

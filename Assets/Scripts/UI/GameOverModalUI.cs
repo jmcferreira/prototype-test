@@ -4,19 +4,21 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Full-screen modal shown on victory or defeat.
-/// Victory: shows scenario summary with stats, "Next Scenario" or "New Run" button.
-/// When transitioning to next scenario, shows RewardScreenUI first for relic pick.
+/// Victory flow: stats → "Next Scenario" → heal → reward screen → scenario selection → reload.
 /// Defeat: "Restart" button starts a fresh run.
 /// </summary>
 public class GameOverModalUI : MonoBehaviour
 {
     private PlayerUnit _player;
     private RewardScreenUI _rewardScreen;
+    private ScenarioSelectionUI _scenarioSelection;
 
-    public void Init(TurnManager turnManager, PlayerUnit player, RewardScreenUI rewardScreen)
+    public void Init(TurnManager turnManager, PlayerUnit player,
+                     RewardScreenUI rewardScreen, ScenarioSelectionUI scenarioSelection)
     {
         _player = player;
         _rewardScreen = rewardScreen;
+        _scenarioSelection = scenarioSelection;
         turnManager.OnGameOver += Show;
         gameObject.SetActive(false);
     }
@@ -103,9 +105,9 @@ public class GameOverModalUI : MonoBehaviour
             string stats = $"HP: {_player.HP}/{_player.MaxHP}  |  Gold: +{gold}  |  XP: +{xp}";
             AddText(innerGo, "Stats", stats, new Color(0.8f, 0.8f, 0.8f), 18, FontStyle.Normal, 28f);
 
-            // Check if there's a next scenario (ScenariosCompleted not yet incremented)
+            // Check if there's a next stage (ScenariosCompleted not yet incremented)
             bool hasNext = RunState.Current != null &&
-                ScenarioPool.GetScenario(RunState.Current.ScenariosCompleted + 2) != null;
+                ScenarioPool.HasStage(RunState.Current.ScenariosCompleted + 2);
 
             if (hasNext)
             {
@@ -189,8 +191,7 @@ public class GameOverModalUI : MonoBehaviour
     }
 
     /// <summary>
-    /// "Next Scenario" clicked — process victory (heal), then show reward screen.
-    /// Relic MaxHP bonuses stack on top of the healed HP.
+    /// "Next Scenario" clicked — process victory (heal), show reward, then scenario selection.
     /// </summary>
     private void OnNextScenarioClicked()
     {
@@ -198,16 +199,48 @@ public class GameOverModalUI : MonoBehaviour
         ScenarioManager.Instance?.OnScenarioVictory(
             _player.HP, CurrencyManager.Gold, CurrencyManager.XP);
 
-        // Then show reward screen before reloading
+        // Chain: reward screen → scenario selection → reload
         gameObject.SetActive(false);
         if (_rewardScreen != null)
         {
-            _rewardScreen.Show(ReloadScene);
+            _rewardScreen.Show(AfterRewardPicked);
         }
         else
         {
+            AfterRewardPicked();
+        }
+    }
+
+    /// <summary>
+    /// After relic is picked, check if the next stage has multiple scenario choices.
+    /// </summary>
+    private void AfterRewardPicked()
+    {
+        if (RunState.Current == null)
+        {
+            ReloadScene();
+            return;
+        }
+
+        // Get choices for the next stage (ScenariosCompleted was already incremented)
+        var choices = ScenarioPool.GetChoices(RunState.Current.ScenariosCompleted + 1);
+
+        if (choices != null && choices.Length > 1 && _scenarioSelection != null)
+        {
+            _scenarioSelection.Show(choices, OnScenarioChosen);
+        }
+        else
+        {
+            // Single choice or no selection UI — use default
             ReloadScene();
         }
+    }
+
+    private void OnScenarioChosen(ScenarioDef chosen)
+    {
+        if (RunState.Current != null)
+            RunState.Current.ChosenNextScenario = chosen;
+        ReloadScene();
     }
 
     /// <summary>
