@@ -15,6 +15,7 @@ public abstract class Unit : MonoBehaviour
     public string DisplayName { get; private set; }
     public int HP { get; private set; } = 3;
     public int MaxHP { get; private set; } = 3;
+    public int Block { get; private set; }
     public bool IsAlive => HP > 0;
 
     /// <summary>Fired when HP or statuses change. UI panels subscribe to this.</summary>
@@ -241,6 +242,31 @@ public abstract class Unit : MonoBehaviour
         NotifyChanged();
     }
 
+    // --- Block (damage absorption, resets at turn start) ---
+
+    /// <summary>
+    /// Add Block points. Block absorbs damage before HP.
+    /// </summary>
+    public void AddBlock(int amount)
+    {
+        if (amount <= 0) return;
+        Block += amount;
+        Debug.Log($"{DisplayName} gained {amount} Block (now {Block})");
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Reduce Block by an amount (consumed during damage resolution).
+    /// Returns the amount actually reduced.
+    /// </summary>
+    public int ReduceBlock(int amount)
+    {
+        int reduced = Mathf.Min(Block, amount);
+        Block -= reduced;
+        NotifyChanged();
+        return reduced;
+    }
+
     // --- Status effect methods ---
 
     /// <summary>
@@ -283,6 +309,26 @@ public abstract class Unit : MonoBehaviour
         Debug.Log($"{DisplayName} {def.Name} consumed ({stacks} stacks).");
         NotifyChanged();
         return stacks;
+    }
+
+    /// <summary>
+    /// Remove up to 'amount' stacks of a status. Returns how many were consumed.
+    /// Used by Dodge (consume 1 per hit) and similar partial-consumption effects.
+    /// </summary>
+    public int ConsumeStatusStacks(StatusEffectType type, int amount)
+    {
+        int current = GetStatusStacks(type);
+        if (current <= 0) return 0;
+        int consumed = Mathf.Min(current, amount);
+        int remaining = current - consumed;
+        if (remaining <= 0)
+            _statuses.Remove(type);
+        else
+            _statuses[type] = remaining;
+        var def = StatusEffectDefs.Get(type);
+        Debug.Log($"{DisplayName} {def.Name} consumed {consumed} stack(s) ({remaining} remaining).");
+        NotifyChanged();
+        return consumed;
     }
 
     /// <summary>
@@ -382,6 +428,14 @@ public abstract class Unit : MonoBehaviour
         DidMoveThisTurn = false;
         DidAttackThisTurn = false;
         WasHitThisTurn = false;
+
+        // Block resets at the start of each turn (Slay the Spire style)
+        if (Block > 0)
+        {
+            Debug.Log($"{DisplayName} Block expired ({Block} → 0).");
+            Block = 0;
+            NotifyChanged();
+        }
     }
 
     /// <summary>Called by TurnManager when this unit's turn ends.</summary>

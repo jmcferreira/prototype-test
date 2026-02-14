@@ -27,18 +27,15 @@ public class AttackLineResolver : ICardResolver
     {
         caster.NotifyAttacked();
 
-        // Consume Strength from caster once for the whole line
-        int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
+        // Consume Strength once for the whole line
+        int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
 
-        // Compute hex line from caster to target
         var line = HexLineDraw(caster.Coord, target);
 
         foreach (var hex in line)
         {
-            // Skip caster's own hex
             if (hex == caster.Coord) continue;
 
-            // Find any unit on this hex
             Unit hitUnit = null;
             foreach (var unit in allUnits)
             {
@@ -48,27 +45,13 @@ public class AttackLineResolver : ICardResolver
                     break;
                 }
             }
-
             if (hitUnit == null) continue;
 
-            // Consume Burn from target
-            int burnStacks = hitUnit.ConsumeStatus(StatusEffectType.Burn);
-            int dmg = action.damage + strStacks + burnStacks;
+            var result = CombatResolver.ResolveHit(caster, hitUnit, action.damage, strBonus);
+            CombatResolver.LogHit(caster, hitUnit, result);
 
-            hitUnit.TakeHit(dmg);
-            string bonusLog = "";
-            if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
-            if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
-            Debug.Log($"AttackLine: {caster.DisplayName} hit {hitUnit.DisplayName} for {dmg} damage{bonusLog}.");
-            BattleLog.AddAction($"Line hit {hitUnit.DisplayName} for {dmg} dmg{bonusLog}");
-
-            if (action.statusStacks > 0)
-            {
-                hitUnit.ApplyStatus(action.statusEffect, action.statusStacks);
-                var def = StatusEffectDefs.Get(action.statusEffect);
-                Debug.Log($"AttackLine: applied {action.statusStacks} {def.Name} to {hitUnit.DisplayName}.");
-                BattleLog.AddAction($"Applied {def.Name} {action.statusStacks} to {hitUnit.DisplayName}");
-            }
+            if (!result.dodged)
+                CombatResolver.ApplyHitStatus(hitUnit, action);
         }
     }
 
@@ -86,7 +69,6 @@ public class AttackLineResolver : ICardResolver
             return results;
         }
 
-        // Slight nudge to avoid ambiguity on exact edges
         float aq = a.q + 1e-6f;
         float ar = a.r + 1e-6f;
         float aS = -aq - ar;

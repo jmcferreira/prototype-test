@@ -25,6 +25,7 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private Image _borderImage;
     private Text _nameText;
     private Text _hpText;
+    private Text _blockText;
     private readonly Dictionary<StatusEffectType, Text> _statusTexts = new();
     private GameObject _deceasedOverlay;
 
@@ -198,6 +199,10 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         // HP
         _hpText = CreateText(innerGo.transform, "HP", isLeft ? 24 : 18, FontStyle.Normal, new Color(0.95f, 0.25f, 0.25f), isLeft ? 30 : 24);
+
+        // Block (hidden by default, shown when Block > 0)
+        _blockText = CreateText(innerGo.transform, "Block", isLeft ? 14 : 12, FontStyle.Bold, new Color(0.45f, 0.7f, 0.9f), isLeft ? 20 : 16);
+        _blockText.gameObject.SetActive(false);
 
         // Status list (vertical, one row per active status)
         BuildStatusList(innerGo.transform, isLeft);
@@ -578,7 +583,8 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             if (_deceasedOverlay != null)
                 _deceasedOverlay.SetActive(true);
 
-            // Hide all status entries
+            // Hide Block and all status entries
+            _blockText.gameObject.SetActive(false);
             foreach (var kvp in _statusTexts)
                 kvp.Value.gameObject.SetActive(false);
             HideTooltip();
@@ -588,6 +594,17 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         string hearts = new string('\u2665', Mathf.Max(0, _unit.HP));
         _hpText.text = hearts;
+
+        // Block display
+        if (_unit.Block > 0)
+        {
+            _blockText.text = $"\u26E8 Block {_unit.Block}";
+            _blockText.gameObject.SetActive(true);
+        }
+        else
+        {
+            _blockText.gameObject.SetActive(false);
+        }
 
         foreach (var kvp in _statusTexts)
         {

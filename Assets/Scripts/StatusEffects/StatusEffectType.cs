@@ -10,4 +10,5 @@ public enum StatusEffectType
     Swift,
     Root,
     Strength,
+    Dodge,
 }

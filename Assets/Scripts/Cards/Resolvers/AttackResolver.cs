@@ -30,36 +30,19 @@ public class AttackResolver : ICardResolver
         {
             if (unit.Coord == target && unit != caster && unit.IsAlive)
             {
-                // Calculate damage with optional max-range bonus
-                int dmg = action.damage;
+                int baseDmg = action.damage;
                 if (action.bonusDamageAtMaxRange && caster.Coord.DistanceTo(target) >= action.range)
-                    dmg += action.bonusDamage;
+                    baseDmg += action.bonusDamage;
 
                 caster.NotifyAttacked();
+                int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
 
-                // Consume Strength from caster: bonus damage equal to stacks
-                int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
-                dmg += strStacks;
+                var result = CombatResolver.ResolveHit(caster, unit, baseDmg, strBonus);
+                CombatResolver.LogHit(caster, unit, result);
 
-                // Consume Burn from target: bonus damage equal to stacks
-                int burnStacks = unit.ConsumeStatus(StatusEffectType.Burn);
-                dmg += burnStacks;
+                if (!result.dodged)
+                    CombatResolver.ApplyHitStatus(unit, action);
 
-                unit.TakeHit(dmg);
-                string bonusLog = "";
-                if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
-                if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
-                Debug.Log($"Attack: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
-                BattleLog.AddAction($"Attack {unit.DisplayName} for {dmg} dmg{bonusLog}");
-
-                // Apply status-on-hit if configured
-                if (action.statusStacks > 0)
-                {
-                    unit.ApplyStatus(action.statusEffect, action.statusStacks);
-                    var def = StatusEffectDefs.Get(action.statusEffect);
-                    Debug.Log($"Attack: applied {action.statusStacks} {def.Name} to {unit.DisplayName}.");
-                    BattleLog.AddAction($"Applied {def.Name} {action.statusStacks} to {unit.DisplayName}");
-                }
                 break;
             }
         }

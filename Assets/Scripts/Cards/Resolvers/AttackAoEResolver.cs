@@ -24,8 +24,8 @@ public class AttackAoEResolver : ICardResolver
     {
         caster.NotifyAttacked();
 
-        // Consume Strength from caster once for the whole AoE
-        int strStacks = caster.ConsumeStatus(StatusEffectType.Strength);
+        // Consume Strength once for the whole AoE
+        int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
 
         int hitCount = 0;
         foreach (var unit in allUnits)
@@ -33,17 +33,9 @@ public class AttackAoEResolver : ICardResolver
             if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
             {
-                // Consume Burn from target
-                int burnStacks = unit.ConsumeStatus(StatusEffectType.Burn);
-                int dmg = action.damage + strStacks + burnStacks;
-
-                unit.TakeHit(dmg);
+                var result = CombatResolver.ResolveHit(caster, unit, action.damage, strBonus);
+                CombatResolver.LogHit(caster, unit, result);
                 hitCount++;
-                string bonusLog = "";
-                if (strStacks > 0) bonusLog += $" (+{strStacks} Strength)";
-                if (burnStacks > 0) bonusLog += $" (+{burnStacks} Burn)";
-                Debug.Log($"AoE: {caster.DisplayName} hit {unit.DisplayName} for {dmg} damage{bonusLog}.");
-                BattleLog.AddAction($"AoE hit {unit.DisplayName} for {dmg} dmg{bonusLog}");
             }
         }
         Debug.Log($"AoE: {caster.DisplayName} hit {hitCount} target(s) total.");

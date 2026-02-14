@@ -136,6 +136,20 @@ public static class StatusEffectDefs
                 BlocksAttackTargeting = false,
             }
         },
+        {
+            StatusEffectType.Dodge, new Def
+            {
+                Name = "Dodge",
+                Description = "Negates the next incoming attack. Consumed on hit (1 stack per hit).",
+                Icon = "\u21B7",                            // ↷ dodge/evade arrow
+                IconColor = new Color(0.4f, 0.85f, 0.95f), // cyan
+                MaxStacks = 3,
+                DamageTrigger = StatusTrigger.None,
+                DamagePerStack = 0,
+                DecayPerTurn = 0,                           // persists until consumed
+                BlocksAttackTargeting = false,
+            }
+        },
     };
     // ────────────────────────────────────────────────────────────────────
 
