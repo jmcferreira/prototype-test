@@ -5,15 +5,18 @@ using UnityEngine.UI;
 /// <summary>
 /// Full-screen modal shown on victory or defeat.
 /// Victory: shows scenario summary with stats, "Next Scenario" or "New Run" button.
+/// When transitioning to next scenario, shows RewardScreenUI first for relic pick.
 /// Defeat: "Restart" button starts a fresh run.
 /// </summary>
 public class GameOverModalUI : MonoBehaviour
 {
     private PlayerUnit _player;
+    private RewardScreenUI _rewardScreen;
 
-    public void Init(TurnManager turnManager, PlayerUnit player)
+    public void Init(TurnManager turnManager, PlayerUnit player, RewardScreenUI rewardScreen)
     {
         _player = player;
+        _rewardScreen = rewardScreen;
         turnManager.OnGameOver += Show;
         gameObject.SetActive(false);
     }
@@ -116,13 +119,13 @@ public class GameOverModalUI : MonoBehaviour
                     AddText(innerGo, "Heal", healInfo, new Color(0.4f, 0.85f, 0.4f), 16, FontStyle.Italic, 24f);
                 }
 
-                AddButton(innerGo, "Next Scenario", new Color(0.2f, 0.55f, 0.2f), OnContinueClicked);
+                AddButton(innerGo, "Next Scenario", new Color(0.2f, 0.55f, 0.2f), OnNextScenarioClicked);
             }
             else
             {
                 AddText(innerGo, "Complete", "All scenarios completed!",
                     new Color(1f, 0.85f, 0.3f), 20, FontStyle.Bold, 30f);
-                AddButton(innerGo, "New Run", new Color(0.2f, 0.45f, 0.6f), OnContinueClicked);
+                AddButton(innerGo, "New Run", new Color(0.2f, 0.45f, 0.6f), OnRunCompleteClicked);
             }
         }
         else
@@ -185,19 +188,46 @@ public class GameOverModalUI : MonoBehaviour
         txtRect.offsetMax = Vector2.zero;
     }
 
-    private void OnContinueClicked()
+    /// <summary>
+    /// "Next Scenario" clicked — process victory (heal), then show reward screen.
+    /// Relic MaxHP bonuses stack on top of the healed HP.
+    /// </summary>
+    private void OnNextScenarioClicked()
     {
-        // Process victory: heals player, advances run, checks for next scenario
+        // Process victory first (heal + advance progress)
         ScenarioManager.Instance?.OnScenarioVictory(
             _player.HP, CurrencyManager.Gold, CurrencyManager.XP);
-        // Reload scene — GameSetup reads RunState.Current (or starts new run if null)
+
+        // Then show reward screen before reloading
+        gameObject.SetActive(false);
+        if (_rewardScreen != null)
+        {
+            _rewardScreen.Show(ReloadScene);
+        }
+        else
+        {
+            ReloadScene();
+        }
+    }
+
+    /// <summary>
+    /// "New Run" clicked (run complete) — no reward needed, just transition.
+    /// </summary>
+    private void OnRunCompleteClicked()
+    {
+        ScenarioManager.Instance?.OnScenarioVictory(
+            _player.HP, CurrencyManager.Gold, CurrencyManager.XP);
+        ReloadScene();
+    }
+
+    private void ReloadScene()
+    {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     private void OnRestartClicked()
     {
         ScenarioManager.Instance?.OnScenarioDefeat();
-        // RunState cleared — scene reload will start a fresh run
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

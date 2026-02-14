@@ -27,6 +27,10 @@ public abstract class Unit : MonoBehaviour
     // --- Passive skill ---
     public PassiveSkill Passive { get; private set; }
 
+    // --- Relic bonuses (set during scenario setup from RunState) ---
+    public int RelicStartingBlock { get; set; }
+    public int RelicDamageBonus { get; set; }
+
     // --- Fate deck ---
     public FateDeck FateDeck { get; private set; }
     public void SetFateDeck(FateDeck deck) => FateDeck = deck;
@@ -278,6 +282,16 @@ public abstract class Unit : MonoBehaviour
     }
 
     /// <summary>
+    /// Increase max HP (and current HP) by an amount. Used for MaxHPBonus relics.
+    /// </summary>
+    public void IncreaseMaxHP(int amount)
+    {
+        MaxHP += amount;
+        HP += amount;
+        NotifyChanged();
+    }
+
+    /// <summary>
     /// Recover HP, capped at MaxHP.
     /// </summary>
     public void Heal(int amount)
@@ -481,6 +495,10 @@ public abstract class Unit : MonoBehaviour
             Block = 0;
             NotifyChanged();
         }
+
+        // Relic: starting block each turn
+        if (RelicStartingBlock > 0)
+            AddBlock(RelicStartingBlock);
 
         // Regenerate resources
         if (_resources.Count > 0)

@@ -18,8 +18,43 @@ public class RunState
     public int TotalGold;
     public int TotalXP;
 
-    // Healing between scenarios (base 10%, can be modified by relics later)
+    // Healing between scenarios (base 10%, modified by HealBonus relics)
     public float HealPercent = 0.10f;
+
+    // Relics acquired during the run
+    public List<RelicDef> Relics = new();
+
+    /// <summary>
+    /// Add a relic. Immediate effects (HealBonus) are applied on acquisition.
+    /// </summary>
+    public void AddRelic(RelicDef relic)
+    {
+        Relics.Add(relic);
+
+        // HealBonus modifies the run-level heal percent immediately
+        if (relic.effect == RelicEffect.HealBonus)
+            HealPercent += relic.value / 100f;
+
+        // MaxHPBonus increases the player def's max HP permanently for the run
+        if (relic.effect == RelicEffect.MaxHPBonus)
+        {
+            PlayerDef.maxHP += relic.value;
+            PlayerCurrentHP += relic.value; // also increase current HP
+        }
+
+        UnityEngine.Debug.Log($"Relic acquired: {relic.relicName} ({relic.tier})");
+    }
+
+    /// <summary>
+    /// Sum of all relic values for a given effect type.
+    /// </summary>
+    public int GetRelicTotal(RelicEffect effect)
+    {
+        int total = 0;
+        foreach (var r in Relics)
+            if (r.effect == effect) total += r.value;
+        return total;
+    }
 
     /// <summary>
     /// Create a new run from a starting player definition.

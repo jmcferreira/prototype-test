@@ -60,6 +60,9 @@ public class GameSetup : MonoBehaviour
         if (run.ScenariosCompleted > 0)
             player.SetCurrentHP(run.PlayerCurrentHP);
 
+        // Apply relic bonuses from the run
+        ApplyRelics(player, run);
+
         var enemies = SpawnEnemies(scenario);
 
         // --- Fate decks ---
@@ -131,11 +134,17 @@ public class GameSetup : MonoBehaviour
         var banner = bannerGo.AddComponent<TurnBannerUI>();
         banner.Init(turnManager);
 
+        // Reward screen (hidden until victory transition)
+        var rewardGo = new GameObject("RewardScreen");
+        rewardGo.transform.SetParent(uiGo.transform, false);
+        var rewardScreen = rewardGo.AddComponent<RewardScreenUI>();
+        rewardScreen.Init();
+
         // Game-over modal (hidden until victory/defeat)
         var modalGo = new GameObject("GameOverModal");
         modalGo.transform.SetParent(uiGo.transform, false);
         var modal = modalGo.AddComponent<GameOverModalUI>();
-        modal.Init(turnManager, player);
+        modal.Init(turnManager, player, rewardScreen);
 
         // Battle log (scrollable panel below player panel)
         var battleLogGo = new GameObject("BattleLog");
@@ -172,6 +181,29 @@ public class GameSetup : MonoBehaviour
         Debug.Log($"Scenario '{scenario.scenarioName}' loaded — {enemies.Length} enemies, threat {scenario.threatLevel}" +
                   $" | Stage {run.ScenariosCompleted + 1}" +
                   (run.ScenariosCompleted > 0 ? $" | HP: {player.HP}/{player.MaxHP}" : ""));
+    }
+
+    // ── Relic application ──────────────────────────────────────────────────
+
+    private static void ApplyRelics(PlayerUnit player, RunState run)
+    {
+        if (run.Relics.Count == 0) return;
+
+        int blockBonus = run.GetRelicTotal(RelicEffect.StartingBlock);
+        int dmgBonus = run.GetRelicTotal(RelicEffect.DamageBonus);
+        int goldBonus = run.GetRelicTotal(RelicEffect.GoldBonus);
+
+        if (blockBonus > 0) player.RelicStartingBlock = blockBonus;
+        if (dmgBonus > 0) player.RelicDamageBonus = dmgBonus;
+        if (goldBonus > 0) CurrencyManager.AddGold(goldBonus);
+
+        // MaxHPBonus and HealBonus are already applied in RunState.AddRelic
+        // (MaxHP/HP increased on PlayerDef, HealPercent modified on RunState)
+
+        Debug.Log($"Relics applied: {run.Relics.Count} total" +
+                  (blockBonus > 0 ? $" | Block +{blockBonus}/turn" : "") +
+                  (dmgBonus > 0 ? $" | Dmg +{dmgBonus}" : "") +
+                  (goldBonus > 0 ? $" | Gold +{goldBonus}" : ""));
     }
 
     // ── Unit spawning ────────────────────────────────────────────────────

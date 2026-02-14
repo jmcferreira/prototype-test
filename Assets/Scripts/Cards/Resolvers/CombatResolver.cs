@@ -13,6 +13,7 @@ public static class CombatResolver
         public int strengthBonus;
         public int burnBonus;
         public int fateDamageBonus;
+        public int relicDamageBonus;
         public int totalRaw;
         public int blocked;
         public bool dodged;
@@ -43,7 +44,8 @@ public static class CombatResolver
 
         // Consume Burn from target
         result.burnBonus = target.ConsumeStatus(StatusEffectType.Burn);
-        result.totalRaw = baseDamage + strengthBonus + result.burnBonus + fateDamageBonus;
+        result.relicDamageBonus = caster.RelicDamageBonus;
+        result.totalRaw = baseDamage + strengthBonus + result.burnBonus + fateDamageBonus + result.relicDamageBonus;
 
         // Dodge check — consume 1 stack, negate the hit entirely
         if (target.HasStatus(StatusEffectType.Dodge))
@@ -85,6 +87,7 @@ public static class CombatResolver
         if (result.strengthBonus > 0) extras.Add($"+{result.strengthBonus} Str");
         if (result.burnBonus > 0) extras.Add($"+{result.burnBonus} Burn");
         if (result.fateDamageBonus > 0) extras.Add($"+{result.fateDamageBonus} Fate");
+        if (result.relicDamageBonus > 0) extras.Add($"+{result.relicDamageBonus} Relic");
         if (result.blocked > 0) extras.Add($"{result.blocked} blocked");
 
         if (extras.Count > 0)
