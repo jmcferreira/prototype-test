@@ -145,6 +145,12 @@ public class RecruitmentUI : MonoBehaviour
         creature.SetTurnManager(_turnManager);
         creature.SetFateDeck(new FateDeck(FateCardLibrary.GetBasicEnemyDeck()));
 
+        // Alliance-based chip colors
+        if (playerIndex == 0)
+            creature.SetChipColors(new Color(0.2f, 0.7f, 0.6f), new Color(0.1f, 0.35f, 0.3f));
+        else
+            creature.SetChipColors(new Color(0.8f, 0.5f, 0.15f), new Color(0.4f, 0.25f, 0.08f));
+
         // Register with turn manager and match state
         _turnManager.AddCreature(creature);
         match.Creatures[playerIndex].Add(creature);

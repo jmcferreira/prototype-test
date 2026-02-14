@@ -569,6 +569,13 @@ public class GameSetup : MonoBehaviour
         champion.InitHand(CardLibrary.GetDeck(def.deckId));
         champion.SetPassive(PassiveFactory.Create(def.passiveType));
         champion.SetAlliance(alliance);
+
+        // Alliance-based chip colors (P1 teal, P2 orange)
+        if (alliance == 0)
+            champion.SetChipColors(new Color(0.2f, 0.7f, 0.6f), new Color(0.1f, 0.35f, 0.3f));
+        else
+            champion.SetChipColors(new Color(0.8f, 0.5f, 0.15f), new Color(0.4f, 0.25f, 0.08f));
+
         return champion;
     }
 }

@@ -55,9 +55,20 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         _turnManager = turnManager;
         _isLeft = isLeft;
 
-        Color teamColor = unit.Team == Team.Player
-            ? new Color(0.3f, 0.55f, 1f)
-            : new Color(1f, 0.3f, 0.3f);
+        Color teamColor;
+        if (GameModeState.CurrentMode == GameMode.PVP && unit.Alliance >= 0)
+        {
+            // PVP: alliance-based colors (P1 teal, P2 orange)
+            teamColor = unit.Alliance == 0
+                ? new Color(0.2f, 0.7f, 0.6f)
+                : new Color(0.85f, 0.5f, 0.2f);
+        }
+        else
+        {
+            teamColor = unit.Team == Team.Player
+                ? new Color(0.3f, 0.55f, 1f)
+                : new Color(1f, 0.3f, 0.3f);
+        }
         _borderActiveColor = teamColor;
         _borderInactiveColor = new Color(teamColor.r * 0.25f, teamColor.g * 0.25f, teamColor.b * 0.25f, 0.85f);
 
@@ -83,8 +94,8 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     {
         transform.localScale = Vector3.one * 1.3f;
 
-        // For enemy panels, also show intent + fire event for hex highlighting
-        if (!_isLeft && _unit != null && _unit.IsAlive && _unit.Team == Team.Enemy)
+        // For enemy/creature panels, show intent + fire event for hex highlighting
+        if (_unit != null && _unit.IsAlive && _unit is EnemyUnit)
         {
             _panelHovered = true;
             ComputeAndShowIntent();
@@ -97,13 +108,10 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     {
         transform.localScale = Vector3.one;
 
-        if (!_isLeft)
-        {
-            _panelHovered = false;
-            HideIntent();
-            if (_unit is EnemyUnit eu)
-                OnEnemyPanelHoverExit?.Invoke(eu);
-        }
+        _panelHovered = false;
+        HideIntent();
+        if (_unit is EnemyUnit eu)
+            OnEnemyPanelHoverExit?.Invoke(eu);
     }
 
     /// <summary>

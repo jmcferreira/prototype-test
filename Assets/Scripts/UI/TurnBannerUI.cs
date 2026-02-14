@@ -84,6 +84,16 @@ public class TurnBannerUI : MonoBehaviour
     {
         if (unit == null) return;
 
+        // PVP mode: use alliance for banner color
+        if (GameModeState.CurrentMode == GameMode.PVP && unit.Alliance >= 0)
+        {
+            bool isP1 = unit.Alliance == 0;
+            _bgImage.color = isP1 ? PlayerBg : EnemyBg;
+            _mainText.text = $"Player {unit.Alliance + 1}'s Turn";
+            _subText.text = unit.DisplayName;
+            return;
+        }
+
         bool isPlayer = unit.Team == Team.Player;
         _bgImage.color = isPlayer ? PlayerBg : EnemyBg;
         _mainText.text = isPlayer ? "Player's Turn" : "Enemy Turn";

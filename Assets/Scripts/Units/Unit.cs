@@ -162,6 +162,22 @@ public abstract class Unit : MonoBehaviour
         tm.fontStyle = FontStyle.Bold;
     }
 
+    /// <summary>
+    /// Override the poker-chip colours. Used in PVP to differentiate alliances.
+    /// </summary>
+    public void SetChipColors(Color bright, Color dark)
+    {
+        _rimBaseColor = dark;
+        if (_rimMat != null) _rimMat.color = dark;
+
+        var renderers = GetComponentsInChildren<MeshRenderer>();
+        foreach (var r in renderers)
+        {
+            if (r.name == "ChipFace")
+                r.material.color = bright;
+        }
+    }
+
     private static Material CreateUnlitMat(Color color)
     {
         var mat = new Material(Shader.Find("Unlit/Color"));
