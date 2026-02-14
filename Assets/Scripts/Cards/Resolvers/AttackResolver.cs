@@ -36,12 +36,16 @@ public class AttackResolver : ICardResolver
 
                 caster.NotifyAttacked();
                 int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
+                int fateDmg = FateCombatContext.DamageBonus;
 
-                var result = CombatResolver.ResolveHit(caster, unit, baseDmg, strBonus);
+                var result = CombatResolver.ResolveHit(caster, unit, baseDmg, strBonus, fateDmg);
                 CombatResolver.LogHit(caster, unit, result);
 
                 if (!result.dodged)
+                {
                     CombatResolver.ApplyHitStatus(unit, action);
+                    CombatResolver.ApplyFateStatuses(caster, unit);
+                }
 
                 break;
             }

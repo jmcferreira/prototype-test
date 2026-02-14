@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public class PlayerUnit : Unit
 {
-    private enum State { Inactive, Idle, CardSelected }
+    private enum State { Inactive, Idle, CardSelected, ResolvingFate }
 
     public Hand Hand { get; private set; }
 
@@ -27,6 +28,7 @@ public class PlayerUnit : Unit
     // Multi-target tracking
     private int _multiTargetRemaining;
     private HashSet<HexCoord> _multiTargetExclude = new();
+    private bool _fateDrawnForAction;
 
     // Enemy intent hover (chip or panel)
     private EnemyUnit _hoveredEnemy;
@@ -444,7 +446,21 @@ public class PlayerUnit : Unit
         HexCoord clicked = tileUnderMouse.Coord;
         if (!_validTargetSet.Contains(clicked)) return;
 
-        // Resolve this action
+        var action = _selectedCard.GetAction(_currentActionIndex);
+
+        // Attack actions: route through fate draw coroutine (first hit only)
+        if (IsAttackEffect(action.effect) && !_fateDrawnForAction && FateManager.Instance != null)
+        {
+            StartCoroutine(ResolveAttackWithFate(clicked, action));
+            return;
+        }
+
+        // Non-attack actions or multi-target subsequent hits: resolve immediately
+        ResolveClickedTarget(clicked);
+    }
+
+    private void ResolveClickedTarget(HexCoord clicked)
+    {
         ClearTargetHover();
         ClearHighlights();
         var allUnits = _turnManager.GetAliveUnits();
@@ -470,8 +486,51 @@ public class PlayerUnit : Unit
             }
         }
 
+        // Clear fate context when advancing to next action
+        FateCombatContext.Clear();
+        _fateDrawnForAction = false;
         _currentActionIndex++;
         ShowCurrentAction();
+    }
+
+    private IEnumerator ResolveAttackWithFate(HexCoord clicked, CardAction action)
+    {
+        _state = State.ResolvingFate;
+        ClearTargetHover();
+        ClearHighlights();
+
+        // Find defender unit at the clicked hex (for single-target; null for AoE)
+        Unit defender = null;
+        if (action.effect == CardEffect.Attack || action.effect == CardEffect.AttackLine)
+        {
+            var allUnits = _turnManager.GetAliveUnits();
+            foreach (var u in allUnits)
+            {
+                if (u.IsAlive && u.Coord == clicked && u != this)
+                {
+                    defender = u;
+                    break;
+                }
+            }
+        }
+
+        // Fate draws: player is attacker, defender may be enemy (AI pick) or null
+        bool isPlayerDefender = defender != null && defender.Team == Team.Player;
+        yield return StartCoroutine(FateManager.Instance.ResolveFateDraws(
+            this, defender, isPlayerAttacker: true, isPlayerDefender: isPlayerDefender));
+
+        _fateDrawnForAction = true;
+        _state = State.CardSelected;
+
+        // Now resolve the action with fate context set
+        ResolveClickedTarget(clicked);
+    }
+
+    private static bool IsAttackEffect(CardEffect effect)
+    {
+        return effect == CardEffect.Attack
+            || effect == CardEffect.AttackAoE
+            || effect == CardEffect.AttackLine;
     }
 
     private void SkipCurrentAction()
@@ -495,6 +554,8 @@ public class PlayerUnit : Unit
         _validTargetSet = null;
         _multiTargetRemaining = 0;
         _multiTargetExclude.Clear();
+        _fateDrawnForAction = false;
+        FateCombatContext.Clear();
         _handUI?.SetSelectedCard(-1);
         _handUI?.HideActionStep();
         _handUI?.Refresh(Hand);
@@ -510,6 +571,8 @@ public class PlayerUnit : Unit
         _validTargetSet = null;
         _multiTargetRemaining = 0;
         _multiTargetExclude.Clear();
+        _fateDrawnForAction = false;
+        FateCombatContext.Clear();
         Debug.Log("Card cancelled.");
         EnterIdle();
     }

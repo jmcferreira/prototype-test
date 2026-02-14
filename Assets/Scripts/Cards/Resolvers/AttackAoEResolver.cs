@@ -26,6 +26,7 @@ public class AttackAoEResolver : ICardResolver
 
         // Consume Strength once for the whole AoE
         int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
+        int fateDmg = FateCombatContext.DamageBonus;
 
         int hitCount = 0;
         foreach (var unit in allUnits)
@@ -33,8 +34,15 @@ public class AttackAoEResolver : ICardResolver
             if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
             {
-                var result = CombatResolver.ResolveHit(caster, unit, action.damage, strBonus);
+                var result = CombatResolver.ResolveHit(caster, unit, action.damage, strBonus, fateDmg);
                 CombatResolver.LogHit(caster, unit, result);
+
+                if (!result.dodged)
+                {
+                    CombatResolver.ApplyHitStatus(unit, action);
+                    CombatResolver.ApplyFateStatuses(caster, unit);
+                }
+
                 hitCount++;
             }
         }

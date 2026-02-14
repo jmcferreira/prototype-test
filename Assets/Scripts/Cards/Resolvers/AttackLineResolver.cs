@@ -29,6 +29,7 @@ public class AttackLineResolver : ICardResolver
 
         // Consume Strength once for the whole line
         int strBonus = CombatResolver.ConsumeAttackerBonuses(caster);
+        int fateDmg = FateCombatContext.DamageBonus;
 
         var line = HexLineDraw(caster.Coord, target);
 
@@ -47,11 +48,14 @@ public class AttackLineResolver : ICardResolver
             }
             if (hitUnit == null) continue;
 
-            var result = CombatResolver.ResolveHit(caster, hitUnit, action.damage, strBonus);
+            var result = CombatResolver.ResolveHit(caster, hitUnit, action.damage, strBonus, fateDmg);
             CombatResolver.LogHit(caster, hitUnit, result);
 
             if (!result.dodged)
+            {
                 CombatResolver.ApplyHitStatus(hitUnit, action);
+                CombatResolver.ApplyFateStatuses(caster, hitUnit);
+            }
         }
     }
 

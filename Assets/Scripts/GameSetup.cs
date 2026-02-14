@@ -23,6 +23,7 @@ public class GameSetup : MonoBehaviour
         // Clear static state from previous play sessions
         BattleLog.Clear();
         CurrencyManager.Clear();
+        FateCombatContext.Clear();
 
         // Load scenario definition
         var scenario = Scenarios.CreateTestScenario();
@@ -34,6 +35,11 @@ public class GameSetup : MonoBehaviour
         // --- Spawn units from scenario data ---
         var player = SpawnPlayer(scenario);
         var enemies = SpawnEnemies(scenario);
+
+        // --- Fate decks ---
+        player.SetFateDeck(new FateDeck(FateCardLibrary.GetStarterDeck()));
+        foreach (var enemy in enemies)
+            enemy.SetFateDeck(new FateDeck(FateCardLibrary.GetBasicEnemyDeck()));
 
         // --- Token manager ---
         var tokenManagerGo = new GameObject("TokenManager");
@@ -116,6 +122,17 @@ public class GameSetup : MonoBehaviour
         currencyGo.transform.SetParent(uiGo.transform, false);
         var currencyUI = currencyGo.AddComponent<CurrencyUI>();
         currencyUI.Init();
+
+        // Fate card selection UI (modal, hidden until draw)
+        var fateUIGo = new GameObject("FateSelectionUI");
+        fateUIGo.transform.SetParent(uiGo.transform, false);
+        var fateSelectionUI = fateUIGo.AddComponent<FateSelectionUI>();
+        fateSelectionUI.Init(uiGo.transform);
+
+        // Fate manager (singleton orchestrator)
+        var fateManagerGo = new GameObject("FateManager");
+        var fateManager = fateManagerGo.AddComponent<FateManager>();
+        fateManager.SetSelectionUI(fateSelectionUI);
 
         // --- Start the game ---
         var turnOrder = new List<Unit> { player };

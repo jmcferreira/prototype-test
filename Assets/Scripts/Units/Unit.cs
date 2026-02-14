@@ -27,6 +27,10 @@ public abstract class Unit : MonoBehaviour
     // --- Passive skill ---
     public PassiveSkill Passive { get; private set; }
 
+    // --- Fate deck ---
+    public FateDeck FateDeck { get; private set; }
+    public void SetFateDeck(FateDeck deck) => FateDeck = deck;
+
     // --- Turn action tracking ---
     public bool DidMoveThisTurn { get; private set; }
     public bool DidAttackThisTurn { get; private set; }

@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Centralized damage pipeline. All attack resolvers delegate here so that
-/// Strength, Burn, Block, Dodge, and future fate-card modifiers are applied
+/// Strength, Burn, Block, Dodge, and Fate card modifiers are applied
 /// in one consistent place.
 /// </summary>
 public static class CombatResolver
@@ -12,6 +12,7 @@ public static class CombatResolver
         public int baseDamage;
         public int strengthBonus;
         public int burnBonus;
+        public int fateDamageBonus;
         public int totalRaw;
         public int blocked;
         public bool dodged;
@@ -29,23 +30,20 @@ public static class CombatResolver
 
     /// <summary>
     /// Resolve a single attack hit against a target.
-    /// Handles Burn consumption, Dodge check, Block absorption, and HP damage.
+    /// Handles Fate bonus, Burn consumption, Dodge check, Block absorption, and HP damage.
     /// </summary>
-    /// <param name="caster">The attacking unit (for logging).</param>
-    /// <param name="target">The unit being hit.</param>
-    /// <param name="baseDamage">Damage before any status bonuses.</param>
-    /// <param name="strengthBonus">Pre-consumed Strength bonus from caster.</param>
-    public static HitResult ResolveHit(Unit caster, Unit target, int baseDamage, int strengthBonus)
+    public static HitResult ResolveHit(Unit caster, Unit target, int baseDamage, int strengthBonus, int fateDamageBonus = 0)
     {
         var result = new HitResult
         {
             baseDamage = baseDamage,
             strengthBonus = strengthBonus,
+            fateDamageBonus = fateDamageBonus,
         };
 
         // Consume Burn from target
         result.burnBonus = target.ConsumeStatus(StatusEffectType.Burn);
-        result.totalRaw = baseDamage + strengthBonus + result.burnBonus;
+        result.totalRaw = baseDamage + strengthBonus + result.burnBonus + fateDamageBonus;
 
         // Dodge check — consume 1 stack, negate the hit entirely
         if (target.HasStatus(StatusEffectType.Dodge))
@@ -86,6 +84,7 @@ public static class CombatResolver
         var extras = new System.Collections.Generic.List<string>();
         if (result.strengthBonus > 0) extras.Add($"+{result.strengthBonus} Str");
         if (result.burnBonus > 0) extras.Add($"+{result.burnBonus} Burn");
+        if (result.fateDamageBonus > 0) extras.Add($"+{result.fateDamageBonus} Fate");
         if (result.blocked > 0) extras.Add($"{result.blocked} blocked");
 
         if (extras.Count > 0)
@@ -105,6 +104,27 @@ public static class CombatResolver
             target.ApplyStatus(action.statusEffect, action.statusStacks);
             var def = StatusEffectDefs.Get(action.statusEffect);
             BattleLog.AddAction($"Applied {def.Name} {action.statusStacks} to {target.DisplayName}");
+        }
+    }
+
+    /// <summary>
+    /// Apply post-hit Fate status effects from FateCombatContext.
+    /// Attacker fate status → applied to target. Defender fate status → applied to attacker.
+    /// </summary>
+    public static void ApplyFateStatuses(Unit caster, Unit target)
+    {
+        if (FateCombatContext.AttackerStatusStacks > 0 && target.IsAlive)
+        {
+            target.ApplyStatus(FateCombatContext.AttackerStatusEffect, FateCombatContext.AttackerStatusStacks);
+            var def = StatusEffectDefs.Get(FateCombatContext.AttackerStatusEffect);
+            BattleLog.AddAction($"Fate: Applied {def.Name} {FateCombatContext.AttackerStatusStacks} to {target.DisplayName}");
+        }
+
+        if (FateCombatContext.DefenderStatusStacks > 0 && caster.IsAlive)
+        {
+            caster.ApplyStatus(FateCombatContext.DefenderStatusEffect, FateCombatContext.DefenderStatusStacks);
+            var def = StatusEffectDefs.Get(FateCombatContext.DefenderStatusEffect);
+            BattleLog.AddAction($"Fate: Applied {def.Name} {FateCombatContext.DefenderStatusStacks} to {caster.DisplayName}");
         }
     }
 }

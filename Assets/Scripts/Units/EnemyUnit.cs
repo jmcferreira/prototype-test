@@ -175,6 +175,25 @@ public class EnemyUnit : Unit
             HighlightCoord(best, true);
             yield return new WaitForSeconds(DelayShowTargets);
 
+            // Fate draw for attack actions (once per action, before first resolve)
+            if (IsDamageEffect(action.effect) && FateManager.Instance != null)
+            {
+                // Find defender at best target hex (for single-target/line; null for AoE)
+                Unit defender = null;
+                if (action.effect != CardEffect.AttackAoE)
+                {
+                    foreach (var u in allUnits)
+                    {
+                        if (u.IsAlive && u.Coord == best && u != this)
+                        { defender = u; break; }
+                    }
+                }
+
+                bool isPlayerDefender = defender != null && defender.Team == Team.Player;
+                yield return StartCoroutine(FateManager.Instance.ResolveFateDraws(
+                    this, defender, isPlayerAttacker: false, isPlayerDefender: isPlayerDefender));
+            }
+
             // Resolve
             Debug.Log($"  {DisplayName} resolves {Hand.DescribeAction(action)} at {best}.");
             chosenCard.ResolveAction(i, this, allUnits, Grid, best);
@@ -183,7 +202,7 @@ public class EnemyUnit : Unit
             // Clear chosen highlight
             HighlightCoord(best, false);
 
-            // Multi-target: resolve on additional targets
+            // Multi-target: resolve on additional targets (reuses same fate context)
             if (action.maxTargets > 1)
             {
                 var hitSet = new HashSet<HexCoord> { best };
@@ -207,6 +226,9 @@ public class EnemyUnit : Unit
                     hitSet.Add(nextBest);
                 }
             }
+
+            // Clear fate context after action completes
+            FateCombatContext.Clear();
 
             yield return new WaitForSeconds(DelayAfterResolve);
         }
