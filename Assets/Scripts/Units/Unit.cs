@@ -269,6 +269,15 @@ public abstract class Unit : MonoBehaviour
     }
 
     /// <summary>
+    /// Set HP directly. Used to restore HP from run state between scenarios.
+    /// </summary>
+    public void SetCurrentHP(int hp)
+    {
+        HP = Mathf.Clamp(hp, 0, MaxHP);
+        NotifyChanged();
+    }
+
+    /// <summary>
     /// Recover HP, capped at MaxHP.
     /// </summary>
     public void Heal(int amount)

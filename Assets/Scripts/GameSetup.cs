@@ -25,15 +25,41 @@ public class GameSetup : MonoBehaviour
         CurrencyManager.Clear();
         FateCombatContext.Clear();
 
-        // Load scenario definition
-        var scenario = Scenarios.CreateTestScenario();
+        // Ensure ScenarioManager singleton exists (persists across scene reloads)
+        if (ScenarioManager.Instance == null)
+        {
+            var smGo = new GameObject("ScenarioManager");
+            smGo.AddComponent<ScenarioManager>();
+        }
+
+        // Initialize run if needed (first load or after run complete)
+        if (RunState.Current == null)
+        {
+            var defaultPlayerDef = new UnitDef
+            {
+                displayName = "Player 1",
+                maxHP = 10,
+                iconLetter = "P1",
+                deckId = "player_default",
+                passiveType = PassiveType.Setup,
+            };
+            RunState.NewRun(defaultPlayerDef);
+        }
+
+        var run = RunState.Current;
+        var scenario = run.GetNextScenario() ?? ScenarioPool.GetScenario(1);
 
         // Reconfigure grid if scenario requires different dimensions
         if (scenario.gridColumns != hexGrid.Columns || scenario.gridRows != hexGrid.Rows)
             hexGrid.Regenerate(scenario.gridColumns, scenario.gridRows);
 
         // --- Spawn units from scenario data ---
-        var player = SpawnPlayer(scenario);
+        var player = SpawnPlayer(run.PlayerDef, scenario.playerSpawn);
+
+        // Restore HP from run state (may be less than max if continuing a run)
+        if (run.ScenariosCompleted > 0)
+            player.SetCurrentHP(run.PlayerCurrentHP);
+
         var enemies = SpawnEnemies(scenario);
 
         // --- Fate decks ---
@@ -109,7 +135,7 @@ public class GameSetup : MonoBehaviour
         var modalGo = new GameObject("GameOverModal");
         modalGo.transform.SetParent(uiGo.transform, false);
         var modal = modalGo.AddComponent<GameOverModalUI>();
-        modal.Init(turnManager);
+        modal.Init(turnManager, player);
 
         // Battle log (scrollable panel below player panel)
         var battleLogGo = new GameObject("BattleLog");
@@ -143,17 +169,18 @@ public class GameSetup : MonoBehaviour
         if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
             Camera.main.gameObject.AddComponent<CameraController>();
 
-        Debug.Log($"Scenario '{scenario.scenarioName}' loaded — {enemies.Length} enemies, threat {scenario.threatLevel}");
+        Debug.Log($"Scenario '{scenario.scenarioName}' loaded — {enemies.Length} enemies, threat {scenario.threatLevel}" +
+                  $" | Stage {run.ScenariosCompleted + 1}" +
+                  (run.ScenariosCompleted > 0 ? $" | HP: {player.HP}/{player.MaxHP}" : ""));
     }
 
     // ── Unit spawning ────────────────────────────────────────────────────
 
-    private PlayerUnit SpawnPlayer(ScenarioDef scenario)
+    private PlayerUnit SpawnPlayer(UnitDef def, HexCoord spawnPos)
     {
-        var def = scenario.playerDef;
         var go = new GameObject();
         var player = go.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, scenario.playerSpawn, hexGrid, def.displayName, def.maxHP, def.iconLetter);
+        player.Init(Team.Player, spawnPos, hexGrid, def.displayName, def.maxHP, def.iconLetter);
         player.InitHand(CardLibrary.GetDeck(def.deckId));
         player.SetPassive(PassiveFactory.Create(def.passiveType));
         return player;
