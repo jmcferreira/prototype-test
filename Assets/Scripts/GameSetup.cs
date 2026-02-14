@@ -15,7 +15,34 @@ public class GameSetup : MonoBehaviour
         if (hexGrid == null)
             hexGrid = FindObjectOfType<HexGrid>();
 
+        // If no game mode selected yet, show main menu
+        if (GameModeState.CurrentMode == GameMode.None)
+        {
+            ShowMainMenu();
+            return;
+        }
+
         Invoke(nameof(Setup), 0f);
+    }
+
+    private void ShowMainMenu()
+    {
+        var menuCanvas = new GameObject("MenuCanvas");
+        var canvas = menuCanvas.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        menuCanvas.AddComponent<CanvasScaler>();
+        menuCanvas.AddComponent<GraphicRaycaster>();
+
+        var menuGo = new GameObject("MainMenu");
+        menuGo.transform.SetParent(menuCanvas.transform, false);
+        var menu = menuGo.AddComponent<MainMenuUI>();
+        menu.Init();
+        menu.OnModeSelected += (mode) =>
+        {
+            Destroy(menuCanvas);
+            Invoke(nameof(Setup), 0f);
+        };
     }
 
     private void Setup()
@@ -25,6 +52,17 @@ public class GameSetup : MonoBehaviour
         CurrencyManager.Clear();
         FateCombatContext.Clear();
 
+        if (GameModeState.CurrentMode == GameMode.PVP)
+        {
+            SetupPVP();
+            return;
+        }
+
+        SetupCampaign();
+    }
+
+    private void SetupCampaign()
+    {
         // Ensure ScenarioManager singleton exists (persists across scene reloads)
         if (ScenarioManager.Instance == null)
         {
@@ -343,5 +381,12 @@ public class GameSetup : MonoBehaviour
             goldRemaining -= value;
             placed++;
         }
+    }
+
+    // ── PVP setup (filled in Phase 6) ─────────────────────────────────────
+
+    private void SetupPVP()
+    {
+        Debug.Log("PVP mode — setup not yet implemented.");
     }
 }
