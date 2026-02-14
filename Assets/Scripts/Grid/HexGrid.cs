@@ -59,6 +59,22 @@ public class HexGrid : MonoBehaviour
     }
 
     /// <summary>
+    /// Destroy the current grid and rebuild with new dimensions.
+    /// Called by GameSetup when a scenario requires a different grid size.
+    /// </summary>
+    public void Regenerate(int cols, int rowCount)
+    {
+        foreach (var kvp in _tiles)
+            if (kvp.Value != null)
+                Destroy(kvp.Value.gameObject);
+        _tiles.Clear();
+
+        columns = cols;
+        rows = rowCount;
+        GenerateGrid();
+    }
+
+    /// <summary>
     /// Tries to get the tile at the given axial coordinate.
     /// </summary>
     public bool TryGetTile(HexCoord coord, out HexTile tile)
