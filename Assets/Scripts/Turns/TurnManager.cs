@@ -8,12 +8,12 @@ using UnityEngine;
 /// </summary>
 public class TurnManager : MonoBehaviour
 {
-    private List<Unit> _turnOrder = new();
-    private int _currentIndex;
+    protected List<Unit> _turnOrder = new();
+    protected int _currentIndex;
 
     public Unit CurrentUnit => _turnOrder.Count > 0 ? _turnOrder[_currentIndex] : null;
     public Team CurrentTeam => CurrentUnit != null ? CurrentUnit.Team : Team.Player;
-    public int TurnNumber { get; private set; } = 1;
+    public int TurnNumber { get; protected set; } = 1;
 
     /// <summary>Fired when the active unit changes (at game start and after each turn ends).</summary>
     public event Action<Unit> OnTurnChanged;
@@ -27,7 +27,7 @@ public class TurnManager : MonoBehaviour
     /// <summary>
     /// Returns a fresh list of all alive units.
     /// </summary>
-    public List<Unit> GetAliveUnits()
+    public virtual List<Unit> GetAliveUnits()
     {
         var alive = new List<Unit>();
         foreach (var u in _turnOrder)
@@ -35,7 +35,7 @@ public class TurnManager : MonoBehaviour
         return alive;
     }
 
-    public void Begin(List<Unit> turnOrder)
+    public virtual void Begin(List<Unit> turnOrder)
     {
         _turnOrder = new List<Unit>(turnOrder);
         _currentIndex = 0;
@@ -49,7 +49,7 @@ public class TurnManager : MonoBehaviour
     /// <summary>
     /// Called by the active unit when it finishes acting.
     /// </summary>
-    public void EndCurrentTurn()
+    public virtual void EndCurrentTurn()
     {
         if (_turnOrder.Count == 0) return;
 
@@ -68,11 +68,16 @@ public class TurnManager : MonoBehaviour
             bool playerWon = anyPlayerAlive;
             string result = playerWon ? "Victory! All enemies defeated." : "Defeat! Player has fallen.";
             Debug.Log(result);
-            OnGameOver?.Invoke(playerWon);
+            FireGameOver(playerWon);
             return;
         }
 
         // Advance to next alive unit
+        AdvanceToNextUnit();
+    }
+
+    protected void AdvanceToNextUnit()
+    {
         int startIndex = _currentIndex;
         do
         {
@@ -82,7 +87,10 @@ public class TurnManager : MonoBehaviour
 
         Debug.Log($"=== Turn {TurnNumber} — {CurrentUnit.DisplayName}'s turn ===");
         BattleLog.AddTurnHeader(CurrentUnit.DisplayName, TurnNumber);
-        OnTurnChanged?.Invoke(CurrentUnit);
+        FireTurnChanged(CurrentUnit);
         CurrentUnit.OnTurnStart();
     }
+
+    protected void FireTurnChanged(Unit unit) => OnTurnChanged?.Invoke(unit);
+    protected void FireGameOver(bool playerWon) => OnGameOver?.Invoke(playerWon);
 }
