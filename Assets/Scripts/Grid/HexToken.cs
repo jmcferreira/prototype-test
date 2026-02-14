@@ -69,7 +69,7 @@ public class WebToken : HexToken
     public override bool OnUnitEnter(Unit unit, List<Unit> allUnits)
     {
         // Only trigger for enemies of the token owner
-        if (unit.Team == Owner.Team) return false;
+        if (Owner.IsAlly(unit)) return false;
         if (!unit.IsAlive) return false;
 
         unit.ApplyStatus(StatusEffectType.Root, 1);

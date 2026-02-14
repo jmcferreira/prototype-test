@@ -13,7 +13,7 @@ public class AttackAoEResolver : ICardResolver
         // Check if any enemy is in range
         foreach (var unit in allUnits)
         {
-            if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
+            if (unit == caster || caster.IsAlly(unit) || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
                 return new List<HexCoord> { caster.Coord };
         }
@@ -31,7 +31,7 @@ public class AttackAoEResolver : ICardResolver
         int hitCount = 0;
         foreach (var unit in allUnits)
         {
-            if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
+            if (unit == caster || caster.IsAlly(unit) || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
             {
                 var result = CombatResolver.ResolveHit(caster, unit, action.damage, strBonus, fateDmg);

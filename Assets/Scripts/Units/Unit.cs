@@ -11,12 +11,31 @@ public enum Team { Player, Enemy }
 public abstract class Unit : MonoBehaviour
 {
     public Team Team { get; private set; }
+    public int Alliance { get; private set; } = -1;
     public HexCoord Coord { get; private set; }
     public string DisplayName { get; private set; }
     public int HP { get; private set; } = 3;
     public int MaxHP { get; private set; } = 3;
     public int Block { get; private set; }
     public bool IsAlive => HP > 0;
+
+    /// <summary>
+    /// Set the alliance ID for multi-team modes (PVP). Units with the same
+    /// alliance are allies regardless of Team. When Alliance is -1 (default),
+    /// friend/foe checks fall through to the Team enum (Campaign mode).
+    /// </summary>
+    public void SetAlliance(int alliance) => Alliance = alliance;
+
+    /// <summary>True if other is on the same side (same alliance or same team).</summary>
+    public bool IsAlly(Unit other)
+    {
+        if (Alliance >= 0 && other.Alliance >= 0)
+            return Alliance == other.Alliance;
+        return Team == other.Team;
+    }
+
+    /// <summary>True if other is on the opposing side.</summary>
+    public bool IsEnemy(Unit other) => !IsAlly(other);
 
     /// <summary>Fired when HP or statuses change. UI panels subscribe to this.</summary>
     public event Action OnChanged;

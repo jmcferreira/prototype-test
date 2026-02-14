@@ -14,7 +14,7 @@ public class PullResolver : ICardResolver
 
         foreach (var unit in allUnits)
         {
-            if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
+            if (unit == caster || caster.IsAlly(unit) || !unit.IsAlive) continue;
 
             int dist = caster.Coord.DistanceTo(unit.Coord);
             if (dist > action.range || dist <= 1) continue;

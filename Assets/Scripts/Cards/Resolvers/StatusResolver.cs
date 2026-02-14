@@ -19,7 +19,7 @@ public class StatusResolver : ICardResolver
 
         foreach (var unit in allUnits)
         {
-            if (unit == caster || unit.Team == caster.Team || !unit.IsAlive) continue;
+            if (unit == caster || caster.IsAlly(unit) || !unit.IsAlive) continue;
             if (caster.Coord.DistanceTo(unit.Coord) <= action.range)
                 targets.Add(unit.Coord);
         }

@@ -254,7 +254,7 @@ public class EnemyUnit : Unit
         int closestDist = int.MaxValue;
         foreach (var u in allUnits)
         {
-            if (u.Team == Team || !u.IsAlive) continue;
+            if (IsAlly(u) || !u.IsAlive) continue;
             int d = Coord.DistanceTo(u.Coord);
             if (d < closestDist) { closestDist = d; best = u; }
         }
