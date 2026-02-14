@@ -84,7 +84,7 @@ public class EnemyUnit : Unit
         // First pass: find a card with a damage action that has valid targets
         foreach (var card in _cards)
         {
-            if (!card.IsReady || card.ActionCount == 0) continue;
+            if (!card.IsReady || card.ActionCount == 0 || !CanAffordCard(card.Data)) continue;
 
             bool canDealDamage = false;
             for (int i = 0; i < card.ActionCount; i++)
@@ -105,7 +105,7 @@ public class EnemyUnit : Unit
         {
             foreach (var card in _cards)
             {
-                if (!card.IsReady || card.ActionCount == 0) continue;
+                if (!card.IsReady || card.ActionCount == 0 || !CanAffordCard(card.Data)) continue;
 
                 for (int i = 0; i < card.ActionCount; i++)
                 {
@@ -233,6 +233,7 @@ public class EnemyUnit : Unit
             yield return new WaitForSeconds(DelayAfterResolve);
         }
 
+        SpendCardCost(chosenCard.Data);
         chosenCard.StartCooldown();
         yield return new WaitForSeconds(DelayTurnEnd);
         _turnManager.EndCurrentTurn();
@@ -290,7 +291,7 @@ public class EnemyUnit : Unit
 
         foreach (var card in _cards)
         {
-            if (!card.IsReady || card.ActionCount == 0) continue;
+            if (!card.IsReady || card.ActionCount == 0 || !CanAffordCard(card.Data)) continue;
             bool canDealDamage = false;
             for (int i = 0; i < card.ActionCount; i++)
             {
@@ -306,7 +307,7 @@ public class EnemyUnit : Unit
         {
             foreach (var card in _cards)
             {
-                if (!card.IsReady || card.ActionCount == 0) continue;
+                if (!card.IsReady || card.ActionCount == 0 || !CanAffordCard(card.Data)) continue;
                 for (int i = 0; i < card.ActionCount; i++)
                 {
                     var targets = card.GetValidTargetsForAction(i, this, allUnits, Grid);

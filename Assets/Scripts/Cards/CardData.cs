@@ -13,6 +13,13 @@ public class CardData : ScriptableObject
     [Tooltip("Ordered list of actions — resolved top to bottom, each can be skipped")]
     public CardAction[] actions;
 
+    [Header("Cost")]
+    [Tooltip("Resource type required to play this card (None = free)")]
+    public ResourceType costType = ResourceType.None;
+
+    [Tooltip("Amount of the resource required")]
+    [Min(0)] public int costAmount = 0;
+
     [Tooltip("Cooldown in turns after being played (0 = no cooldown)")]
     [Min(0)] public int cooldown = 1;
 

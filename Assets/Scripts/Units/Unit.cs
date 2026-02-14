@@ -31,6 +31,38 @@ public abstract class Unit : MonoBehaviour
     public FateDeck FateDeck { get; private set; }
     public void SetFateDeck(FateDeck deck) => FateDeck = deck;
 
+    // --- Resource pools (Mana, Energy, Rage — optional per unit) ---
+    private readonly Dictionary<ResourceType, ResourcePool> _resources = new();
+
+    public void AddResourcePool(ResourceType type, int max, int regenPerTurn = 0)
+    {
+        _resources[type] = new ResourcePool(type, max, regenPerTurn);
+    }
+
+    public ResourcePool GetResource(ResourceType type)
+    {
+        return _resources.TryGetValue(type, out var pool) ? pool : null;
+    }
+
+    public bool CanAffordCard(CardData card)
+    {
+        if (card.costType == ResourceType.None || card.costAmount <= 0) return true;
+        var pool = GetResource(card.costType);
+        return pool != null && pool.CanAfford(card.costAmount);
+    }
+
+    public void SpendCardCost(CardData card)
+    {
+        if (card.costType == ResourceType.None || card.costAmount <= 0) return;
+        var pool = GetResource(card.costType);
+        pool?.Spend(card.costAmount);
+        Debug.Log($"{DisplayName} spent {card.costAmount} {card.costType}");
+        NotifyChanged();
+    }
+
+    /// <summary>All resource pools this unit has (for UI iteration).</summary>
+    public IEnumerable<ResourcePool> ResourcePools => _resources.Values;
+
     // --- Turn action tracking ---
     public bool DidMoveThisTurn { get; private set; }
     public bool DidAttackThisTurn { get; private set; }
@@ -438,6 +470,14 @@ public abstract class Unit : MonoBehaviour
         {
             Debug.Log($"{DisplayName} Block expired ({Block} → 0).");
             Block = 0;
+            NotifyChanged();
+        }
+
+        // Regenerate resources
+        if (_resources.Count > 0)
+        {
+            foreach (var pool in _resources.Values)
+                pool.Regenerate();
             NotifyChanged();
         }
     }

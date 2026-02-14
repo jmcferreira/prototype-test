@@ -279,6 +279,12 @@ public class PlayerUnit : Unit
             return;
         }
 
+        if (!CanAffordCard(card.Data))
+        {
+            Debug.Log($"[{card.Data.cardName}] not enough {card.Data.costType} ({card.Data.costAmount} needed).");
+            return;
+        }
+
         EnterCardSelected(card, index);
     }
 
@@ -545,6 +551,7 @@ public class PlayerUnit : Unit
 
     private void FinishCard()
     {
+        SpendCardCost(_selectedCard.Data);
         _selectedCard.StartCooldown();
         ClearTargetHover();
         ClearHighlights();

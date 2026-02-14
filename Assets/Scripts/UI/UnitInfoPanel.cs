@@ -26,6 +26,7 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private Text _nameText;
     private Text _hpText;
     private Text _blockText;
+    private Text _resourceText;
     private readonly Dictionary<StatusEffectType, Text> _statusTexts = new();
     private GameObject _deceasedOverlay;
 
@@ -203,6 +204,10 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         // Block (hidden by default, shown when Block > 0)
         _blockText = CreateText(innerGo.transform, "Block", isLeft ? 14 : 12, FontStyle.Bold, new Color(0.45f, 0.7f, 0.9f), isLeft ? 20 : 16);
         _blockText.gameObject.SetActive(false);
+
+        // Resource pool (hidden if unit has no resources)
+        _resourceText = CreateText(innerGo.transform, "Resource", isLeft ? 13 : 11, FontStyle.Bold, new Color(0.4f, 0.6f, 1f), isLeft ? 18 : 15);
+        _resourceText.gameObject.SetActive(false);
 
         // Status list (vertical, one row per active status)
         BuildStatusList(innerGo.transform, isLeft);
@@ -583,8 +588,9 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             if (_deceasedOverlay != null)
                 _deceasedOverlay.SetActive(true);
 
-            // Hide Block and all status entries
+            // Hide Block, resource, and all status entries
             _blockText.gameObject.SetActive(false);
+            _resourceText.gameObject.SetActive(false);
             foreach (var kvp in _statusTexts)
                 kvp.Value.gameObject.SetActive(false);
             HideTooltip();
@@ -604,6 +610,29 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         else
         {
             _blockText.gameObject.SetActive(false);
+        }
+
+        // Resource display
+        var resParts = new System.Collections.Generic.List<string>();
+        foreach (var pool in _unit.ResourcePools)
+        {
+            string icon = pool.Type switch
+            {
+                ResourceType.Mana => "\u2726",   // ✦
+                ResourceType.Energy => "\u26A1", // ⚡
+                ResourceType.Rage => "\u2620",   // ☠
+                _ => ""
+            };
+            resParts.Add($"{icon} {pool.Current}/{pool.Max} {pool.Type}");
+        }
+        if (resParts.Count > 0)
+        {
+            _resourceText.text = string.Join("  ", resParts);
+            _resourceText.gameObject.SetActive(true);
+        }
+        else
+        {
+            _resourceText.gameObject.SetActive(false);
         }
 
         foreach (var kvp in _statusTexts)
