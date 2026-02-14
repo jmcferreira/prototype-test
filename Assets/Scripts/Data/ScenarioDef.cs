@@ -9,9 +9,8 @@ public class ScenarioDef
     public int gridColumns = 7;
     public int gridRows = 7;
 
-    // Player
-    public UnitDef playerDef;
-    public HexCoord playerSpawn;
+    // Player spawn positions (one per party member)
+    public HexCoord[] playerSpawns;
 
     // Enemies
     public EnemySpawn[] enemySpawns;

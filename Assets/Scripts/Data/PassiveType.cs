@@ -6,6 +6,7 @@ public enum PassiveType
 {
     None,
     Setup,
+    Guardian,
     Horde,
     DarkPact,
 }

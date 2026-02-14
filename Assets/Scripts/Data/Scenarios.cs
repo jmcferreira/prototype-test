@@ -15,15 +15,7 @@ public static class Scenarios
             gridColumns = 7,
             gridRows = 7,
 
-            playerDef = new UnitDef
-            {
-                displayName = "Player 1",
-                maxHP = 10,
-                iconLetter = "P1",
-                deckId = "player_default",
-                passiveType = PassiveType.Setup,
-            },
-            playerSpawn = new HexCoord(1, 1),
+            playerSpawns = new[] { new HexCoord(1, 1), new HexCoord(1, 2) },
 
             enemySpawns = new[]
             {

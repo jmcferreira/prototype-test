@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Bootstraps the game from a ScenarioDef: spawns units, builds UI, starts the turn loop.
-/// All content (units, cards, passives, loot) comes from data definitions.
+/// Supports multiple player characters (party). All content comes from data definitions.
 /// </summary>
 public class GameSetup : MonoBehaviour
 {
@@ -35,15 +35,26 @@ public class GameSetup : MonoBehaviour
         // Initialize run if needed (first load or after run complete)
         if (RunState.Current == null)
         {
-            var defaultPlayerDef = new UnitDef
+            var defaultParty = new[]
             {
-                displayName = "Player 1",
-                maxHP = 10,
-                iconLetter = "P1",
-                deckId = "player_default",
-                passiveType = PassiveType.Setup,
+                new UnitDef
+                {
+                    displayName = "Ranger",
+                    maxHP = 10,
+                    iconLetter = "R",
+                    deckId = "player_default",
+                    passiveType = PassiveType.Setup,
+                },
+                new UnitDef
+                {
+                    displayName = "Guardian",
+                    maxHP = 12,
+                    iconLetter = "G",
+                    deckId = "player_guardian",
+                    passiveType = PassiveType.Guardian,
+                },
             };
-            RunState.NewRun(defaultPlayerDef);
+            RunState.NewRun(defaultParty);
         }
 
         var run = RunState.Current;
@@ -54,20 +65,17 @@ public class GameSetup : MonoBehaviour
         if (scenario.gridColumns != hexGrid.Columns || scenario.gridRows != hexGrid.Rows)
             hexGrid.Regenerate(scenario.gridColumns, scenario.gridRows);
 
-        // --- Spawn units from scenario data ---
-        var player = SpawnPlayer(run.PlayerDef, scenario.playerSpawn);
+        // --- Spawn player party from run state ---
+        var players = SpawnParty(run, scenario);
 
-        // Restore HP from run state (may be less than max if continuing a run)
-        if (run.ScenariosCompleted > 0)
-            player.SetCurrentHP(run.PlayerCurrentHP);
-
-        // Apply relic bonuses from the run
-        ApplyRelics(player, run);
+        // Apply relic bonuses from the run to all players
+        ApplyRelics(players, run);
 
         var enemies = SpawnEnemies(scenario);
 
         // --- Fate decks ---
-        player.SetFateDeck(new FateDeck(FateCardLibrary.GetStarterDeck()));
+        for (int i = 0; i < players.Length; i++)
+            players[i].SetFateDeck(new FateDeck(run.PlayerFateDecks[i]));
         foreach (var enemy in enemies)
             enemy.SetFateDeck(new FateDeck(FateCardLibrary.GetBasicEnemyDeck()));
 
@@ -79,12 +87,13 @@ public class GameSetup : MonoBehaviour
         SetupEnemyRewards(enemies);
 
         // --- Initial loot tokens ---
-        SpawnInitialLoot(hexGrid, player, enemies, scenario.initialLootGold);
+        SpawnInitialLoot(hexGrid, players, enemies, scenario.initialLootGold);
 
-        // --- HexInteraction ---
+        // --- HexInteraction (shared by all players) ---
         var interactionGo = new GameObject("HexInteraction");
         var hexInteraction = interactionGo.AddComponent<HexInteraction>();
-        player.SetHexInteraction(hexInteraction);
+        foreach (var player in players)
+            player.SetHexInteraction(hexInteraction);
 
         // --- Shared UI canvas ---
         var uiGo = new GameObject("GameUI");
@@ -94,7 +103,7 @@ public class GameSetup : MonoBehaviour
         uiGo.AddComponent<CanvasScaler>();
         uiGo.AddComponent<GraphicRaycaster>();
 
-        // Hand UI (card bar at bottom)
+        // Hand UI (card bar at bottom — switches between active player's hand)
         var handUIGo = new GameObject("HandUI");
         handUIGo.transform.SetParent(uiGo.transform, false);
         var handRect = handUIGo.AddComponent<RectTransform>();
@@ -103,22 +112,27 @@ public class GameSetup : MonoBehaviour
         handRect.offsetMin = Vector2.zero;
         handRect.offsetMax = Vector2.zero;
         var handUI = handUIGo.AddComponent<HandUI>();
-        handUI.Init(player.Hand);
-        player.SetHandUI(handUI);
+        handUI.Init(players[0].Hand);
+        foreach (var player in players)
+            player.SetHandUI(handUI);
 
         // --- Turn manager ---
         var turnManagerGo = new GameObject("TurnManager");
         var turnManager = turnManagerGo.AddComponent<TurnManager>();
-        player.SetTurnManager(turnManager);
+        foreach (var player in players)
+            player.SetTurnManager(turnManager);
         foreach (var enemy in enemies)
             enemy.SetTurnManager(turnManager);
 
         // --- Side panels ---
-        // Player on the left
-        var playerPanelGo = new GameObject("PlayerInfoPanel");
-        playerPanelGo.transform.SetParent(uiGo.transform, false);
-        var playerPanel = playerPanelGo.AddComponent<UnitInfoPanel>();
-        playerPanel.Init(player, turnManager, true);
+        // Players stacked on the left
+        for (int i = 0; i < players.Length; i++)
+        {
+            var panelGo = new GameObject($"PlayerPanel_{players[i].DisplayName}");
+            panelGo.transform.SetParent(uiGo.transform, false);
+            var panel = panelGo.AddComponent<UnitInfoPanel>();
+            panel.Init(players[i], turnManager, true, i);
+        }
 
         // Enemies stacked on the right
         for (int i = 0; i < enemies.Length; i++)
@@ -151,9 +165,9 @@ public class GameSetup : MonoBehaviour
         var modalGo = new GameObject("GameOverModal");
         modalGo.transform.SetParent(uiGo.transform, false);
         var modal = modalGo.AddComponent<GameOverModalUI>();
-        modal.Init(turnManager, player, rewardScreen, scenarioSelection);
+        modal.Init(turnManager, players, rewardScreen, scenarioSelection);
 
-        // Battle log (scrollable panel below player panel)
+        // Battle log (scrollable panel below player panels)
         var battleLogGo = new GameObject("BattleLog");
         battleLogGo.transform.SetParent(uiGo.transform, false);
         var battleLogUI = battleLogGo.AddComponent<BattleLogUI>();
@@ -177,7 +191,8 @@ public class GameSetup : MonoBehaviour
         fateManager.SetSelectionUI(fateSelectionUI);
 
         // --- Start the game ---
-        var turnOrder = new List<Unit> { player };
+        var turnOrder = new List<Unit>();
+        turnOrder.AddRange(players);
         turnOrder.AddRange(enemies);
         turnManager.Begin(turnOrder);
 
@@ -185,14 +200,13 @@ public class GameSetup : MonoBehaviour
         if (Camera.main != null && Camera.main.GetComponent<CameraController>() == null)
             Camera.main.gameObject.AddComponent<CameraController>();
 
-        Debug.Log($"Scenario '{scenario.scenarioName}' loaded — {enemies.Length} enemies, threat {scenario.threatLevel}" +
-                  $" | Stage {run.ScenariosCompleted + 1}" +
-                  (run.ScenariosCompleted > 0 ? $" | HP: {player.HP}/{player.MaxHP}" : ""));
+        Debug.Log($"Scenario '{scenario.scenarioName}' loaded — {players.Length} players, {enemies.Length} enemies" +
+                  $", threat {scenario.threatLevel} | Stage {run.ScenariosCompleted + 1}");
     }
 
     // ── Relic application ──────────────────────────────────────────────────
 
-    private static void ApplyRelics(PlayerUnit player, RunState run)
+    private static void ApplyRelics(PlayerUnit[] players, RunState run)
     {
         if (run.Relics.Count == 0) return;
 
@@ -200,12 +214,12 @@ public class GameSetup : MonoBehaviour
         int dmgBonus = run.GetRelicTotal(RelicEffect.DamageBonus);
         int goldBonus = run.GetRelicTotal(RelicEffect.GoldBonus);
 
-        if (blockBonus > 0) player.RelicStartingBlock = blockBonus;
-        if (dmgBonus > 0) player.RelicDamageBonus = dmgBonus;
+        foreach (var player in players)
+        {
+            if (blockBonus > 0) player.RelicStartingBlock = blockBonus;
+            if (dmgBonus > 0) player.RelicDamageBonus = dmgBonus;
+        }
         if (goldBonus > 0) CurrencyManager.AddGold(goldBonus);
-
-        // MaxHPBonus and HealBonus are already applied in RunState.AddRelic
-        // (MaxHP/HP increased on PlayerDef, HealPercent modified on RunState)
 
         Debug.Log($"Relics applied: {run.Relics.Count} total" +
                   (blockBonus > 0 ? $" | Block +{blockBonus}/turn" : "") +
@@ -215,14 +229,29 @@ public class GameSetup : MonoBehaviour
 
     // ── Unit spawning ────────────────────────────────────────────────────
 
-    private PlayerUnit SpawnPlayer(UnitDef def, HexCoord spawnPos)
+    private PlayerUnit[] SpawnParty(RunState run, ScenarioDef scenario)
     {
-        var go = new GameObject();
-        var player = go.AddComponent<PlayerUnit>();
-        player.Init(Team.Player, spawnPos, hexGrid, def.displayName, def.maxHP, def.iconLetter);
-        player.InitHand(CardLibrary.GetDeck(def.deckId));
-        player.SetPassive(PassiveFactory.Create(def.passiveType));
-        return player;
+        var players = new PlayerUnit[run.PartySize];
+        for (int i = 0; i < run.PartySize; i++)
+        {
+            var def = run.PlayerDefs[i];
+            var spawnPos = i < scenario.playerSpawns.Length
+                ? scenario.playerSpawns[i]
+                : scenario.playerSpawns[0]; // fallback to first spawn
+
+            var go = new GameObject();
+            var player = go.AddComponent<PlayerUnit>();
+            player.Init(Team.Player, spawnPos, hexGrid, def.displayName, def.maxHP, def.iconLetter);
+            player.InitHand(CardLibrary.GetDeck(def.deckId));
+            player.SetPassive(PassiveFactory.Create(def.passiveType));
+
+            // Restore HP from run state (may be less than max if continuing a run)
+            if (run.ScenariosCompleted > 0)
+                player.SetCurrentHP(run.PlayerCurrentHPs[i]);
+
+            players[i] = player;
+        }
+        return players;
     }
 
     private EnemyUnit[] SpawnEnemies(ScenarioDef scenario)
@@ -250,7 +279,7 @@ public class GameSetup : MonoBehaviour
     {
         foreach (var enemy in enemies)
         {
-            var e = enemy; // capture for closure
+            var e = enemy;
             e.OnDefeated += (unit) =>
             {
                 if (unit.XPReward > 0)
@@ -272,9 +301,11 @@ public class GameSetup : MonoBehaviour
 
     // ── Initial loot placement ───────────────────────────────────────────
 
-    private static void SpawnInitialLoot(HexGrid grid, Unit player, EnemyUnit[] enemies, int goldTotal)
+    private static void SpawnInitialLoot(HexGrid grid, PlayerUnit[] players, EnemyUnit[] enemies, int goldTotal)
     {
-        var occupied = new HashSet<HexCoord> { player.Coord };
+        var occupied = new HashSet<HexCoord>();
+        foreach (var p in players)
+            occupied.Add(p.Coord);
         foreach (var e in enemies)
             occupied.Add(e.Coord);
 

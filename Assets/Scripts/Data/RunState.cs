@@ -2,16 +2,16 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Persistent state that carries across scenarios within a single run.
-/// Created once at run start, survives scenario transitions.
+/// Supports multiple player characters (party). Created once at run start.
 /// </summary>
 public class RunState
 {
     public static RunState Current { get; set; }
 
-    // Player state
-    public UnitDef PlayerDef;
-    public int PlayerCurrentHP;
-    public FateCardData[] PlayerFateDeck;
+    // Party state (one entry per player character)
+    public UnitDef[] PlayerDefs;
+    public int[] PlayerCurrentHPs;
+    public FateCardData[][] PlayerFateDecks;
 
     // Run progress
     public int ScenariosCompleted;
@@ -27,22 +27,27 @@ public class RunState
     // Relics acquired during the run
     public List<RelicDef> Relics = new();
 
+    /// <summary>Number of player characters in the party.</summary>
+    public int PartySize => PlayerDefs?.Length ?? 0;
+
     /// <summary>
-    /// Add a relic. Immediate effects (HealBonus) are applied on acquisition.
+    /// Add a relic. Immediate effects (HealBonus, MaxHPBonus) are applied on acquisition.
+    /// MaxHPBonus applies to ALL party members.
     /// </summary>
     public void AddRelic(RelicDef relic)
     {
         Relics.Add(relic);
 
-        // HealBonus modifies the run-level heal percent immediately
         if (relic.effect == RelicEffect.HealBonus)
             HealPercent += relic.value / 100f;
 
-        // MaxHPBonus increases the player def's max HP permanently for the run
         if (relic.effect == RelicEffect.MaxHPBonus)
         {
-            PlayerDef.maxHP += relic.value;
-            PlayerCurrentHP += relic.value; // also increase current HP
+            for (int i = 0; i < PartySize; i++)
+            {
+                PlayerDefs[i].maxHP += relic.value;
+                PlayerCurrentHPs[i] += relic.value;
+            }
         }
 
         UnityEngine.Debug.Log($"Relic acquired: {relic.relicName} ({relic.tier})");
@@ -60,15 +65,23 @@ public class RunState
     }
 
     /// <summary>
-    /// Create a new run from a starting player definition.
+    /// Create a new run with a party of player characters.
     /// </summary>
-    public static RunState NewRun(UnitDef playerDef)
+    public static RunState NewRun(UnitDef[] playerDefs)
     {
+        var hps = new int[playerDefs.Length];
+        var fateDecks = new FateCardData[playerDefs.Length][];
+        for (int i = 0; i < playerDefs.Length; i++)
+        {
+            hps[i] = playerDefs[i].maxHP;
+            fateDecks[i] = FateCardLibrary.GetStarterDeck();
+        }
+
         var run = new RunState
         {
-            PlayerDef = playerDef,
-            PlayerCurrentHP = playerDef.maxHP,
-            PlayerFateDeck = FateCardLibrary.GetStarterDeck(),
+            PlayerDefs = playerDefs,
+            PlayerCurrentHPs = hps,
+            PlayerFateDecks = fateDecks,
             ScenariosCompleted = 0,
             TotalGold = 0,
             TotalXP = 0,
@@ -78,17 +91,21 @@ public class RunState
     }
 
     /// <summary>
-    /// Called after winning a scenario. Heals the player and increments progress.
+    /// Called after winning a scenario. Heals all party members and increments progress.
     /// </summary>
-    public void OnScenarioWon(int playerHPAfterBattle, int goldEarned, int xpEarned)
+    public void OnScenarioWon(int[] playerHPsAfterBattle, int goldEarned, int xpEarned)
     {
         ScenariosCompleted++;
         TotalGold += goldEarned;
         TotalXP += xpEarned;
 
-        // Heal 10% (rounded up, at least 1 HP)
-        int healAmount = UnityEngine.Mathf.Max(1, UnityEngine.Mathf.CeilToInt(PlayerDef.maxHP * HealPercent));
-        PlayerCurrentHP = UnityEngine.Mathf.Min(playerHPAfterBattle + healAmount, PlayerDef.maxHP);
+        for (int i = 0; i < PartySize; i++)
+        {
+            int healAmount = UnityEngine.Mathf.Max(1,
+                UnityEngine.Mathf.CeilToInt(PlayerDefs[i].maxHP * HealPercent));
+            PlayerCurrentHPs[i] = UnityEngine.Mathf.Min(
+                playerHPsAfterBattle[i] + healAmount, PlayerDefs[i].maxHP);
+        }
     }
 
     /// <summary>

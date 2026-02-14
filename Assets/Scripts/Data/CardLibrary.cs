@@ -11,9 +11,10 @@ public static class CardLibrary
     {
         return deckId switch
         {
-            "player_default" => CreatePlayerDeck(),
-            "spider"         => CreateSpiderDeck(),
-            "cultist"        => CreateCultistDeck(),
+            "player_default"  => CreatePlayerDeck(),
+            "player_guardian" => CreateGuardianDeck(),
+            "spider"          => CreateSpiderDeck(),
+            "cultist"         => CreateCultistDeck(),
             _                => System.Array.Empty<CardData>(),
         };
     }
@@ -78,6 +79,56 @@ public static class CardLibrary
         headshot.startCooldown = 6;
 
         return new[] { volley, firebolt, quickManeuver, cripplingShot, headshot };
+    }
+
+    // ── Guardian (melee tank) ─────────────────────────────────────────────
+
+    private static CardData[] CreateGuardianDeck()
+    {
+        // Card 1 — Shield Bash: Move 1 → Attack 2 Range 1. Basic melee engage.
+        var shieldBash = ScriptableObject.CreateInstance<CardData>();
+        shieldBash.cardName = "Shield Bash";
+        shieldBash.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Move, range = 1 },
+            new CardAction { effect = CardEffect.Attack, range = 1, damage = 2 },
+        };
+        shieldBash.cooldown = 0;
+
+        // Card 2 — Protect: Heal 2 (self) → Dodge 1 (self). Defensive recovery.
+        var protect = ScriptableObject.CreateInstance<CardData>();
+        protect.cardName = "Protect";
+        protect.actions = new[]
+        {
+            new CardAction { effect = CardEffect.Heal, damage = 2, targetSelf = true },
+            new CardAction { effect = CardEffect.Status, statusEffect = StatusEffectType.Dodge,
+                             statusStacks = 1, targetSelf = true },
+        };
+        protect.cooldown = 1;
+
+        // Card 3 — War Cry: PushAoE 1 Range 1 → Strength 2 (self). Area clear + power up.
+        var warCry = ScriptableObject.CreateInstance<CardData>();
+        warCry.cardName = "War Cry";
+        warCry.actions = new[]
+        {
+            new CardAction { effect = CardEffect.PushAoE, range = 1, pushDistance = 1 },
+            new CardAction { effect = CardEffect.Status, statusEffect = StatusEffectType.Strength,
+                             statusStacks = 2, targetSelf = true },
+        };
+        warCry.cooldown = 2;
+
+        // Card 4 — Bulwark (Ultimate): AttackAoE 3 Range 1 → Heal 2 (self). Melee AoE + sustain.
+        var bulwark = ScriptableObject.CreateInstance<CardData>();
+        bulwark.cardName = "Bulwark";
+        bulwark.actions = new[]
+        {
+            new CardAction { effect = CardEffect.AttackAoE, range = 1, damage = 3 },
+            new CardAction { effect = CardEffect.Heal, damage = 2, targetSelf = true },
+        };
+        bulwark.cooldown = 4;
+        bulwark.startCooldown = 4;
+
+        return new[] { shieldBash, protect, warCry, bulwark };
     }
 
     // ── Spider ───────────────────────────────────────────────────────────

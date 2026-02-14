@@ -22,26 +22,31 @@ public class ScenarioManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Start a brand new run with the given player definition.
+    /// Start a brand new run with the given party definitions.
     /// </summary>
-    public void StartNewRun(UnitDef playerDef)
+    public void StartNewRun(UnitDef[] playerDefs)
     {
-        RunState.NewRun(playerDef);
+        RunState.NewRun(playerDefs);
         LoadCurrentScenario();
     }
 
     /// <summary>
-    /// Called by GameSetup when the player wins the current scenario.
+    /// Called when the party wins the current scenario.
+    /// Accepts HP array (one per party member).
     /// </summary>
-    public void OnScenarioVictory(int playerHP, int goldEarned, int xpEarned)
+    public void OnScenarioVictory(int[] playerHPs, int goldEarned, int xpEarned)
     {
         var run = RunState.Current;
         if (run == null) return;
 
-        run.OnScenarioWon(playerHP, goldEarned, xpEarned);
+        run.OnScenarioWon(playerHPs, goldEarned, xpEarned);
 
-        Debug.Log($"Scenario complete! HP: {run.PlayerCurrentHP}/{run.PlayerDef.maxHP} " +
-                  $"| Gold: {run.TotalGold} | XP: {run.TotalXP} | Stages: {run.ScenariosCompleted}");
+        string hpSummary = "";
+        for (int i = 0; i < run.PartySize; i++)
+            hpSummary += $" {run.PlayerDefs[i].displayName}:{run.PlayerCurrentHPs[i]}/{run.PlayerDefs[i].maxHP}";
+
+        Debug.Log($"Scenario complete!{hpSummary} | Gold: {run.TotalGold} | XP: {run.TotalXP} " +
+                  $"| Stages: {run.ScenariosCompleted}");
 
         var next = run.GetNextScenario();
         if (next == null)

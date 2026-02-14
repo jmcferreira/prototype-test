@@ -43,6 +43,26 @@ public class SetupPassive : PassiveSkill
 }
 
 /// <summary>
+/// Guardian "Guardian": End of turn, if the unit didn't Attack → gain Block +2.
+/// Rewards defensive play and positioning over aggression.
+/// </summary>
+public class GuardianPassive : PassiveSkill
+{
+    public GuardianPassive()
+        : base("Guardian", "If you didn't Attack this turn, gain Block +2.") { }
+
+    public override bool TryActivate(Unit owner, List<Unit> allUnits, HexGrid grid)
+    {
+        if (owner.DidAttackThisTurn) return false;
+
+        owner.AddBlock(2);
+        Debug.Log($"  Passive [{Name}]: {owner.DisplayName} gains Block +2.");
+        BattleLog.AddAction($"Guardian: Block +2");
+        return true;
+    }
+}
+
+/// <summary>
 /// Cultist "Dark Pact": End of turn, if the unit was hit this turn → gain Strength 1.
 /// Punishes the player for focusing the Cultist.
 /// </summary>

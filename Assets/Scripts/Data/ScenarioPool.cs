@@ -3,6 +3,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Provides scenario choices based on run progress. Each stage offers
 /// 1-3 scenario options with different enemy compositions and threat levels.
+/// All scenarios provide spawn positions for a 2-player party.
 /// </summary>
 public static class ScenarioPool
 {
@@ -73,7 +74,7 @@ public static class ScenarioPool
         {
             scenarioName = "Spider Nest",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(1, 1),
+            playerSpawns = new[] { new HexCoord(1, 1), new HexCoord(1, 2) },
             enemySpawns = new[]
             {
                 Spider("Spider 1", 3, new HexCoord(4, 0), xp: 2, gold: 1),
@@ -93,7 +94,7 @@ public static class ScenarioPool
         {
             scenarioName = "Cultist Ambush",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(1, 1),
+            playerSpawns = new[] { new HexCoord(1, 1), new HexCoord(1, 2) },
             enemySpawns = new[]
             {
                 Spider("Spider", 3, new HexCoord(4, 0), xp: 2, gold: 1),
@@ -112,7 +113,7 @@ public static class ScenarioPool
         {
             scenarioName = "Spider Lair",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(0, 2),
+            playerSpawns = new[] { new HexCoord(0, 2), new HexCoord(0, 3) },
             enemySpawns = new[]
             {
                 Spider("Spider 1", 3, new HexCoord(3, 0), xp: 2, gold: 1),
@@ -132,7 +133,7 @@ public static class ScenarioPool
         {
             scenarioName = "Dark Shrine",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(1, 1),
+            playerSpawns = new[] { new HexCoord(1, 1), new HexCoord(1, 2) },
             enemySpawns = new[]
             {
                 Cultist("Cultist", 7, new HexCoord(4, 0), xp: 5, gold: 2),
@@ -152,7 +153,7 @@ public static class ScenarioPool
         {
             scenarioName = "Dark Ritual",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(0, 2),
+            playerSpawns = new[] { new HexCoord(0, 2), new HexCoord(0, 3) },
             enemySpawns = new[]
             {
                 Cultist("Cultist", 8, new HexCoord(4, 0), xp: 5, gold: 2),
@@ -170,7 +171,7 @@ public static class ScenarioPool
         {
             scenarioName = "Spider Queen's Den",
             gridColumns = 7, gridRows = 7,
-            playerSpawn = new HexCoord(0, 2),
+            playerSpawns = new[] { new HexCoord(0, 2), new HexCoord(0, 3) },
             enemySpawns = new[]
             {
                 Spider("Spider 1", 4, new HexCoord(3, 0), xp: 2, gold: 1),

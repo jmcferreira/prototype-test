@@ -143,8 +143,8 @@ public class EnemyUnit : Unit
                 continue;
             }
 
-            // Auto-resolve self-targeting status effects (no visible target needed)
-            if (action.targetSelf && action.effect == CardEffect.Status)
+            // Auto-resolve self-targeting effects (Status, Heal — no visible target needed)
+            if (action.targetSelf && (action.effect == CardEffect.Status || action.effect == CardEffect.Heal))
             {
                 Debug.Log($"  {DisplayName} resolves {Hand.DescribeAction(action)} on self.");
                 chosenCard.ResolveAction(i, this, allUnits, Grid, Coord);

@@ -78,8 +78,9 @@ public class PlayerUnit : Unit
     {
         base.OnTurnStart();
         Hand?.TickCooldowns();
+        _handUI?.SwitchToHand(Hand);
         _handUI?.Refresh(Hand);
-        Debug.Log("--- Your turn — pick a card or pass. ---");
+        Debug.Log($"--- {DisplayName}'s turn — pick a card or pass. ---");
         EnterIdle();
     }
 
@@ -354,13 +355,21 @@ public class PlayerUnit : Unit
         var allUnits = _turnManager.GetAliveUnits();
         var targets = _selectedCard.GetValidTargetsForAction(_currentActionIndex, this, allUnits, Grid);
 
-        // Auto-resolve self-targeting status effects (no click needed)
-        if (action.targetSelf && action.effect == CardEffect.Status)
+        // Auto-resolve self-targeting effects (Status, Heal — no click needed)
+        if (action.targetSelf && (action.effect == CardEffect.Status || action.effect == CardEffect.Heal))
         {
-            Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
-                      $"{Hand.DescribeAction(action)} — auto-applying to self.");
-            _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, Coord);
-            TriggerStatuses(StatusTrigger.OnAction);
+            if (targets.Count > 0)
+            {
+                Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                          $"{Hand.DescribeAction(action)} — auto-applying to self.");
+                _selectedCard.ResolveAction(_currentActionIndex, this, allUnits, Grid, Coord);
+                TriggerStatuses(StatusTrigger.OnAction);
+            }
+            else
+            {
+                Debug.Log($"  Action {_currentActionIndex + 1}/{_selectedCard.ActionCount}: " +
+                          $"{Hand.DescribeAction(action)} — skipped (not needed).");
+            }
             _currentActionIndex++;
             ShowCurrentAction();
             return;

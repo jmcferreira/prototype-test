@@ -5,9 +5,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// Displays the player's hand as a horizontal row of card buttons.
+/// Displays the active player's hand as a horizontal row of card buttons.
 /// Pure display layer — contains no gameplay logic.
-/// Step highlighting and skip buttons live directly on each CardUI.
+/// Supports switching between different player hands on turn change.
 /// </summary>
 public class HandUI : MonoBehaviour
 {
@@ -18,13 +18,16 @@ public class HandUI : MonoBehaviour
     private readonly List<CardUI> _cardUIs = new();
     private Canvas _canvas;
     private int _selectedCardIndex = -1;
+    private GameObject _cardPanel;
+    private Hand _currentHand;
 
     // ── Init ───────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Build the UI from the given hand. Call once after the hand is created.
+    /// Build the chrome (background, End Turn button). Call once during setup.
+    /// Then call SwitchToHand to show a specific player's cards.
     /// </summary>
-    public void Init(Hand hand)
+    public void Init(Hand initialHand)
     {
         // EventSystem is required for UI clicks to work
         if (FindObjectOfType<EventSystem>() == null)
@@ -59,45 +62,24 @@ public class HandUI : MonoBehaviour
         bgRect.anchoredPosition = Vector2.zero;
         bgRect.sizeDelta = new Vector2(0f, 250f);
 
-        // Card row — centered on the background strip
-        var panelGo = new GameObject("CardPanel");
-        panelGo.transform.SetParent(transform, false);
-        var panelRect = panelGo.AddComponent<RectTransform>();
+        // Card row — centered on the background strip (reusable container)
+        _cardPanel = new GameObject("CardPanel");
+        _cardPanel.transform.SetParent(transform, false);
+        var panelRect = _cardPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0f);
         panelRect.anchorMax = new Vector2(0.5f, 0f);
         panelRect.pivot = new Vector2(0.5f, 0f);
         panelRect.anchoredPosition = new Vector2(0f, 15f);
 
-        var layout = panelGo.AddComponent<HorizontalLayoutGroup>();
+        var layout = _cardPanel.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = -60;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
 
-        var fitter = panelGo.AddComponent<ContentSizeFitter>();
+        var fitter = _cardPanel.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        // Create a CardUI for each card in the hand
-        for (int i = 0; i < hand.Cards.Count; i++)
-        {
-            var cardGo = new GameObject($"Card_{i}");
-            cardGo.transform.SetParent(panelGo.transform, false);
-
-            var cardRect = cardGo.AddComponent<RectTransform>();
-            var le = cardGo.AddComponent<LayoutElement>();
-            le.preferredWidth = 400;
-            le.preferredHeight = 480;
-
-            var cardUI = cardGo.AddComponent<CardUI>();
-            cardUI.Build(hand.Cards[i].Data);
-
-            int index = i; // capture for closure
-            cardUI.OnClicked += () => OnCardClicked?.Invoke(index);
-            cardUI.OnSkipClicked += () => OnSkipClicked?.Invoke();
-
-            _cardUIs.Add(cardUI);
-        }
 
         // End Turn button — anchored at top-center, just below the turn banner
         var passGo = new GameObject("EndTurnButton");
@@ -107,7 +89,7 @@ public class HandUI : MonoBehaviour
         passRect.anchorMin = new Vector2(0.5f, 1f);
         passRect.anchorMax = new Vector2(0.5f, 1f);
         passRect.pivot = new Vector2(0.5f, 1f);
-        passRect.anchoredPosition = new Vector2(0f, -85f); // below the 70px banner + gap
+        passRect.anchoredPosition = new Vector2(0f, -85f);
         passRect.sizeDelta = new Vector2(112f, 51f);
 
         var passBg = passGo.AddComponent<Image>();
@@ -131,17 +113,71 @@ public class HandUI : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
 
-        // Initial refresh
+        // Build cards for the initial hand
+        BuildCards(initialHand);
+    }
+
+    // ── Hand switching ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Switch to a different player's hand. Destroys old cards, creates new ones.
+    /// Called by the active PlayerUnit in OnTurnStart.
+    /// </summary>
+    public void SwitchToHand(Hand hand)
+    {
+        if (hand == _currentHand) return;
+        ClearCards();
+        BuildCards(hand);
+    }
+
+    private void BuildCards(Hand hand)
+    {
+        _currentHand = hand;
+        _selectedCardIndex = -1;
+
+        for (int i = 0; i < hand.Cards.Count; i++)
+        {
+            var cardGo = new GameObject($"Card_{i}");
+            cardGo.transform.SetParent(_cardPanel.transform, false);
+
+            cardGo.AddComponent<RectTransform>();
+            var le = cardGo.AddComponent<LayoutElement>();
+            le.preferredWidth = 400;
+            le.preferredHeight = 480;
+
+            var cardUI = cardGo.AddComponent<CardUI>();
+            cardUI.Build(hand.Cards[i].Data);
+
+            int index = i;
+            cardUI.OnClicked += () => OnCardClicked?.Invoke(index);
+            cardUI.OnSkipClicked += () => OnSkipClicked?.Invoke();
+
+            _cardUIs.Add(cardUI);
+        }
+
         Refresh(hand);
+    }
+
+    private void ClearCards()
+    {
+        foreach (var cardUI in _cardUIs)
+        {
+            if (cardUI != null)
+                Destroy(cardUI.gameObject);
+        }
+        _cardUIs.Clear();
     }
 
     // ── Refresh ────────────────────────────────────────────────────────
 
     /// <summary>
     /// Update all card displays from current hand state.
+    /// Only refreshes if the hand matches the currently displayed one.
     /// </summary>
     public void Refresh(Hand hand)
     {
+        if (hand != _currentHand) return;
+
         for (int i = 0; i < _cardUIs.Count && i < hand.Cards.Count; i++)
         {
             var card = hand.Cards[i];
@@ -154,7 +190,6 @@ public class HandUI : MonoBehaviour
     /// </summary>
     public void SetSelectedCard(int index)
     {
-        // Clear step highlights on previous card
         if (_selectedCardIndex >= 0 && _selectedCardIndex < _cardUIs.Count)
             _cardUIs[_selectedCardIndex].ClearActiveStep();
 

@@ -151,7 +151,9 @@ public class UnitInfoPanel : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             rect.anchorMin = new Vector2(0f, 0.5f);
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(12f, 80f);
+            // Stack multiple player panels vertically (first at top, second below)
+            float yLeft = 80f - stackIndex * (hasPassive ? 320f : 270f);
+            rect.anchoredPosition = new Vector2(12f, yLeft);
             rect.sizeDelta = new Vector2(180f, hasPassive ? 310f : 260f);
         }
         else

@@ -4,19 +4,20 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Full-screen modal shown on victory or defeat.
-/// Victory flow: stats → "Next Scenario" → heal → reward screen → scenario selection → reload.
+/// Victory flow: stats → "Next Scenario" → heal all players → reward screen → scenario selection → reload.
 /// Defeat: "Restart" button starts a fresh run.
+/// Supports multiple player characters (party).
 /// </summary>
 public class GameOverModalUI : MonoBehaviour
 {
-    private PlayerUnit _player;
+    private PlayerUnit[] _players;
     private RewardScreenUI _rewardScreen;
     private ScenarioSelectionUI _scenarioSelection;
 
-    public void Init(TurnManager turnManager, PlayerUnit player,
+    public void Init(TurnManager turnManager, PlayerUnit[] players,
                      RewardScreenUI rewardScreen, ScenarioSelectionUI scenarioSelection)
     {
-        _player = player;
+        _players = players;
         _rewardScreen = rewardScreen;
         _scenarioSelection = scenarioSelection;
         turnManager.OnGameOver += Show;
@@ -43,7 +44,10 @@ public class GameOverModalUI : MonoBehaviour
         overlayImg.color = new Color(0f, 0f, 0f, 0.65f);
         overlayImg.raycastTarget = true;
 
-        // Central card
+        // Central card — taller to accommodate multiple player stats
+        int partySize = _players != null ? _players.Length : 1;
+        float cardHeight = playerWon ? 260f + partySize * 30f : 220f;
+
         var cardGo = new GameObject("Card");
         cardGo.transform.SetParent(transform, false);
         var cardImg = cardGo.AddComponent<Image>();
@@ -52,7 +56,7 @@ public class GameOverModalUI : MonoBehaviour
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
         cardRect.anchorMax = new Vector2(0.5f, 0.5f);
         cardRect.pivot = new Vector2(0.5f, 0.5f);
-        cardRect.sizeDelta = new Vector2(460f, playerWon ? 300f : 220f);
+        cardRect.sizeDelta = new Vector2(460f, cardHeight);
 
         // Border tint
         Color borderColor = playerWon
@@ -85,7 +89,7 @@ public class GameOverModalUI : MonoBehaviour
         // Vertical layout
         var layout = innerGo.AddComponent<VerticalLayoutGroup>();
         layout.padding = new RectOffset(20, 20, 24, 20);
-        layout.spacing = 12;
+        layout.spacing = 10;
         layout.childAlignment = TextAnchor.MiddleCenter;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
@@ -99,11 +103,21 @@ public class GameOverModalUI : MonoBehaviour
 
         if (playerWon)
         {
-            // Scenario summary stats
+            // Per-player HP stats
+            foreach (var player in _players)
+            {
+                string hpInfo = $"{player.DisplayName}: {player.HP}/{player.MaxHP} HP";
+                Color hpColor = player.IsAlive
+                    ? new Color(0.8f, 0.8f, 0.8f)
+                    : new Color(0.5f, 0.3f, 0.3f);
+                AddText(innerGo, $"HP_{player.DisplayName}", hpInfo, hpColor, 16, FontStyle.Normal, 22f);
+            }
+
+            // Currency summary
             int gold = CurrencyManager.Gold;
             int xp = CurrencyManager.XP;
-            string stats = $"HP: {_player.HP}/{_player.MaxHP}  |  Gold: +{gold}  |  XP: +{xp}";
-            AddText(innerGo, "Stats", stats, new Color(0.8f, 0.8f, 0.8f), 18, FontStyle.Normal, 28f);
+            AddText(innerGo, "Currency", $"Gold: +{gold}  |  XP: +{xp}",
+                new Color(0.85f, 0.75f, 0.4f), 16, FontStyle.Normal, 22f);
 
             // Check if there's a next stage (ScenariosCompleted not yet incremented)
             bool hasNext = RunState.Current != null &&
@@ -111,14 +125,19 @@ public class GameOverModalUI : MonoBehaviour
 
             if (hasNext)
             {
-                // Show heal preview
+                // Show heal preview for each player
                 var run = RunState.Current;
-                int healAmount = Mathf.Max(1, Mathf.CeilToInt(run.PlayerDef.maxHP * run.HealPercent));
-                int healedHP = Mathf.Min(_player.HP + healAmount, run.PlayerDef.maxHP);
-                if (healedHP > _player.HP)
+                for (int i = 0; i < _players.Length && i < run.PartySize; i++)
                 {
-                    string healInfo = $"Healed +{healedHP - _player.HP} HP ({healedHP}/{run.PlayerDef.maxHP})";
-                    AddText(innerGo, "Heal", healInfo, new Color(0.4f, 0.85f, 0.4f), 16, FontStyle.Italic, 24f);
+                    int healAmount = Mathf.Max(1, Mathf.CeilToInt(run.PlayerDefs[i].maxHP * run.HealPercent));
+                    int healedHP = Mathf.Min(_players[i].HP + healAmount, run.PlayerDefs[i].maxHP);
+                    if (healedHP > _players[i].HP)
+                    {
+                        string healInfo = $"{_players[i].DisplayName}: +{healedHP - _players[i].HP} HP " +
+                                          $"({healedHP}/{run.PlayerDefs[i].maxHP})";
+                        AddText(innerGo, $"Heal_{i}", healInfo,
+                            new Color(0.4f, 0.85f, 0.4f), 14, FontStyle.Italic, 20f);
+                    }
                 }
 
                 AddButton(innerGo, "Next Scenario", new Color(0.2f, 0.55f, 0.2f), OnNextScenarioClicked);
@@ -191,15 +210,24 @@ public class GameOverModalUI : MonoBehaviour
     }
 
     /// <summary>
-    /// "Next Scenario" clicked — process victory (heal), show reward, then scenario selection.
+    /// Collect current HP from all players as an array for RunState.
+    /// </summary>
+    private int[] GetPlayerHPs()
+    {
+        var hps = new int[_players.Length];
+        for (int i = 0; i < _players.Length; i++)
+            hps[i] = _players[i].HP;
+        return hps;
+    }
+
+    /// <summary>
+    /// "Next Scenario" clicked — process victory (heal all), show reward, then scenario selection.
     /// </summary>
     private void OnNextScenarioClicked()
     {
-        // Process victory first (heal + advance progress)
         ScenarioManager.Instance?.OnScenarioVictory(
-            _player.HP, CurrencyManager.Gold, CurrencyManager.XP);
+            GetPlayerHPs(), CurrencyManager.Gold, CurrencyManager.XP);
 
-        // Chain: reward screen → scenario selection → reload
         gameObject.SetActive(false);
         if (_rewardScreen != null)
         {
@@ -222,7 +250,6 @@ public class GameOverModalUI : MonoBehaviour
             return;
         }
 
-        // Get choices for the next stage (ScenariosCompleted was already incremented)
         var choices = ScenarioPool.GetChoices(RunState.Current.ScenariosCompleted + 1);
 
         if (choices != null && choices.Length > 1 && _scenarioSelection != null)
@@ -231,7 +258,6 @@ public class GameOverModalUI : MonoBehaviour
         }
         else
         {
-            // Single choice or no selection UI — use default
             ReloadScene();
         }
     }
@@ -249,7 +275,7 @@ public class GameOverModalUI : MonoBehaviour
     private void OnRunCompleteClicked()
     {
         ScenarioManager.Instance?.OnScenarioVictory(
-            _player.HP, CurrencyManager.Gold, CurrencyManager.XP);
+            GetPlayerHPs(), CurrencyManager.Gold, CurrencyManager.XP);
         ReloadScene();
     }
 

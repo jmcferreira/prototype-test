@@ -8,6 +8,7 @@ public static class PassiveFactory
         return type switch
         {
             PassiveType.Setup    => new SetupPassive(),
+            PassiveType.Guardian => new GuardianPassive(),
             PassiveType.Horde    => new HordePassive(),
             PassiveType.DarkPact => new DarkPactPassive(),
             _                    => null,
