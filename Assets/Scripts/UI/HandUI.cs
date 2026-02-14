@@ -57,7 +57,7 @@ public class HandUI : MonoBehaviour
         bgRect.anchorMax = new Vector2(1f, 0f);
         bgRect.pivot = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(0f, 220f);
+        bgRect.sizeDelta = new Vector2(0f, 250f);
 
         // Card row — centered on the background strip
         var panelGo = new GameObject("CardPanel");
@@ -87,7 +87,7 @@ public class HandUI : MonoBehaviour
             var cardRect = cardGo.AddComponent<RectTransform>();
             var le = cardGo.AddComponent<LayoutElement>();
             le.preferredWidth = 400;
-            le.preferredHeight = 420;
+            le.preferredHeight = 480;
 
             var cardUI = cardGo.AddComponent<CardUI>();
             cardUI.Build(hand.Cards[i].Data);
