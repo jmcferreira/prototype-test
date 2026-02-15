@@ -27,6 +27,14 @@ public class GameSetup : MonoBehaviour
 
     private void ShowMainMenu()
     {
+        // Ensure EventSystem exists for UI click detection
+        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+        {
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+
         var menuCanvas = new GameObject("MenuCanvas");
         var canvas = menuCanvas.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
